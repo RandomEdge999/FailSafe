@@ -2,7 +2,7 @@
 
 ## System Architecture
 
-FailSafe is a TypeScript-first monorepo. The Phase 1 slice uses a Next.js studio, Fastify orchestrator API, shared Zod schemas, typed scenario packs, scoring helpers, trace helpers, and synthetic demo data. The studio now loads its project, scenario, run, finding, trace, score, and regression state from the API instead of local-only frontend data.
+FailSafe is a TypeScript-first monorepo. The Phase 2 slice uses a Next.js studio, Fastify orchestrator API, shared Zod schemas, typed scenario packs, a deterministic mock scenario engine, scoring helpers, trace helpers, and synthetic demo data. The studio loads its project, scenario, run, finding, trace, score, regression, and mock replay state from the API.
 
 ```mermaid
 flowchart LR
@@ -10,6 +10,7 @@ flowchart LR
   Studio --> API["orchestrator-api<br/>Fastify mock API"]
   API --> Schemas["schemas<br/>Zod contracts"]
   API --> Packs["attack-packs<br/>defensive packs"]
+  API --> ScenarioEngine["scenario-engine<br/>deterministic mock execution"]
   API --> Scoring["scoring-engine<br/>heuristic score"]
   API --> Trace["trace-model<br/>timeline helpers"]
   API --> MockData["in-memory mock data<br/>projects, runs, findings, regressions"]
@@ -28,7 +29,7 @@ Renders the FailSafe Studio dashboard. The current implementation uses a typed A
 
 ### `apps/orchestrator-api`
 
-Owns HTTP routes for health, projects, scenarios, runs, findings, and regressions. The current API returns mock data and stores created mock runs and regression artifacts in memory for the server process. Future work should add persistence, real run orchestration, sandbox dispatch, trace collection from a runner, and replay execution.
+Owns HTTP routes for health, projects, scenarios, runs, findings, and regressions. The current API returns mock data and stores created mock runs, replay runs, and regression artifacts in memory for the server process. It owns lifecycle materialization from `queued` to `running` to `needs_review`, while scenario-specific trace, finding, and score generation lives in `packages/scenario-engine`. Future work should add persistence, real run orchestration, sandbox dispatch, trace collection from a runner, and reviewed sandbox replay execution.
 
 ### `packages/schemas`
 
@@ -37,6 +38,10 @@ Defines Zod schemas and TypeScript types for all core entities. This package is 
 ### `packages/attack-packs`
 
 Defines typed defensive scenario packs. Packs must use synthetic examples and avoid real exploit instructions or live targets.
+
+### `packages/scenario-engine`
+
+Produces deterministic mock scenario executions. Given a project, agent target, scenario pack, run ID, seed, and start time, it builds a typed synthetic plan, emits trace events, creates scenario-specific findings, calculates scenario-specific score inputs, and returns a validated `ScenarioRun`. The same seed and scenario context produce stable event and finding ID suffixes. The engine does not call real tools, files, shell commands, network, LLMs, MCP servers, Copilot, email, or databases.
 
 ### `packages/scoring-engine`
 
@@ -56,7 +61,8 @@ Provides trace-event parsing and timeline grouping helpers. Future work can add 
 6. Studio renders timeline events, scorecard factors, and findings from the API response.
 7. User selects a timeline event to inspect metadata and raw evidence.
 8. User selects a finding to inspect root cause, mitigations, and a Copilot prompt preview.
-9. User saves a regression through `POST /regressions/mock`; the API creates an in-memory artifact with finding IDs, trace event IDs, expected safe behavior, and a future replay command.
+9. User saves a regression through `POST /regressions/mock`; the API creates an in-memory artifact with finding IDs, trace event IDs, expected safe behavior, deterministic seed, agent target ID, source run status, scenario version, expected finding categories, expected trace event types, and a mock replay endpoint.
+10. User replays a saved artifact through `POST /regressions/:id/replay-mock`; the API verifies the artifact is mock replayable, calls the deterministic scenario engine with the saved seed, stores a new in-memory replay run with `baselineRunId`, and returns the replayed `ScenarioRun`.
 
 ## Trace Flow
 
@@ -78,12 +84,17 @@ Trace events should preserve provenance. Untrusted content, tool output, MCP met
 
 ## Regression Artifact Flow
 
-Phase 1 adds a shared `RegressionArtifact` schema with:
+Phase 2 extends the shared `RegressionArtifact` schema with:
 
 - `id`
 - `runId`
 - `projectId`
 - `scenarioPackId`
+- `agentTargetId`
+- `seed`
+- `sourceRunStatus`
+- `mockReplayable`
+- `scenarioVersion`
 - `findingIds`
 - `name`
 - `description`
@@ -91,9 +102,11 @@ Phase 1 adds a shared `RegressionArtifact` schema with:
 - `status`
 - `replayCommand`
 - `expectedSafeBehavior`
+- `expectedFindingCategories`
+- `expectedTraceEventTypes`
 - `traceEventIds`
 
-Regression artifacts are currently in-memory mock records only. They do not write files, update a database, or execute replay commands.
+Regression artifacts are currently in-memory mock records only. They do not write files, update a database, or execute shell replay commands. Phase 2 replay is API-only: `POST /regressions/:id/replay-mock` reruns the deterministic synthetic scenario in memory and never invokes real tools or external systems.
 
 ## Future Sandbox Runner Design
 

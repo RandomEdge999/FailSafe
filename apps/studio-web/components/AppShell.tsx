@@ -28,6 +28,7 @@ import {
   listRegressions,
   listRuns,
   listScenarios,
+  replayMockRegression,
   saveRegression
 } from "../lib/api-client";
 
@@ -74,11 +75,17 @@ export function AppShell() {
   >();
   const [isLoading, setIsLoading] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
+  const [replayingRegressionId, setReplayingRegressionId] = useState<
+    string | undefined
+  >();
   const [isSavingRegression, setIsSavingRegression] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [showCopilotPanel, setShowCopilotPanel] = useState(false);
   const [lastSavedRegressionId, setLastSavedRegressionId] = useState<
+    string | undefined
+  >();
+  const [lastReplayedRegressionId, setLastReplayedRegressionId] = useState<
     string | undefined
   >();
 
@@ -216,6 +223,30 @@ export function AppShell() {
       setActionError(formatError(error));
     } finally {
       setIsSavingRegression(false);
+    }
+  }
+
+  async function handleReplayRegression(regression: RegressionArtifact) {
+    setActionError(null);
+    setShowCopilotPanel(false);
+    setReplayingRegressionId(regression.id);
+
+    try {
+      const createdRun = await replayMockRegression(regression.id);
+
+      applyRun(createdRun);
+      setLastReplayedRegressionId(regression.id);
+
+      let latestRun = createdRun;
+      for (let attempt = 0; attempt < 8 && isRunInProgress(latestRun); attempt += 1) {
+        await delay(650);
+        latestRun = await getRun(createdRun.id);
+        applyRun(latestRun);
+      }
+    } catch (error) {
+      setActionError(formatError(error));
+    } finally {
+      setReplayingRegressionId(undefined);
     }
   }
 
@@ -407,6 +438,9 @@ export function AppShell() {
           <RegressionPanel
             regressions={regressions}
             lastSavedRegressionId={lastSavedRegressionId}
+            lastReplayedRegressionId={lastReplayedRegressionId}
+            onReplayMock={(regression) => void handleReplayRegression(regression)}
+            replayingRegressionId={replayingRegressionId}
           />
         </div>
       </div>

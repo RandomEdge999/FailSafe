@@ -173,3 +173,14 @@ export function saveRegression(
     }
   );
 }
+
+export function replayMockRegression(id: string): Promise<ScenarioRun> {
+  return requestJson(
+    `/regressions/${id}/replay-mock`,
+    (value) => ScenarioRunSchema.parse(value),
+    {
+      body: "{}",
+      method: "POST"
+    }
+  );
+}

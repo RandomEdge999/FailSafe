@@ -41,8 +41,8 @@ function promptPreview(
         "provenance separation",
         "regression tests"
       ],
-      phaseOneConstraint:
-        "No live code patch is executed from the UI in Phase 1."
+      phaseTwoConstraint:
+        "No live code patch is executed from the UI in Phase 2."
     },
     null,
     2

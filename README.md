@@ -2,7 +2,7 @@
 
 Crash-test AI agents before production does.
 
-FailSafe is a visual crash-test studio for AI agents and MCP toolchains. It helps developers import an agent project, map tools and trust boundaries, run defensive adversarial scenarios, visualize the failure timeline, score the risk, generate mitigation guidance, and rerun the same scenario as a regression case.
+FailSafe is a visual crash-test studio for AI agents and MCP toolchains. It helps developers import an agent project, map tools and trust boundaries, run defensive synthetic scenarios, visualize the failure timeline, score the risk, generate mitigation guidance, and rerun the same mock scenario as a regression case.
 
 ## Problem Statement
 
@@ -31,7 +31,7 @@ FailSafe is built for the Microsoft Agents League Hackathon, Creative Apps categ
 
 ## Current MVP Scope
 
-The current Phase 1 slice includes a runnable API-backed mock studio, mock orchestrator API, shared Zod schemas, starter defensive scenario packs, a scoring heuristic, example vulnerable-agent inputs, in-memory mock run lifecycle state, in-memory regression artifacts, docs, Copilot instructions, prompt files, and custom agent instruction files.
+The current Phase 2 slice includes a runnable API-backed mock studio, mock orchestrator API, shared Zod schemas, starter defensive scenario packs, a deterministic mock scenario engine, a scoring heuristic, example vulnerable-agent inputs, in-memory mock run lifecycle state, in-memory regression artifacts, safe mock replay API support, docs, Copilot instructions, prompt files, and custom agent instruction files.
 
 It does not include real sandbox execution, live LLM calls, real MCP introspection or execution, PostgreSQL persistence, queues, authentication, deployment infrastructure, or destructive tool execution.
 
@@ -42,6 +42,7 @@ apps/studio-web          Next.js dashboard and mock crash-lab UI
 apps/orchestrator-api    Fastify mock API for projects, scenarios, runs, findings, and regressions
 packages/schemas         Shared Zod schemas and TypeScript types
 packages/attack-packs    Typed starter defensive scenario packs
+packages/scenario-engine Deterministic synthetic run, finding, trace, and replay generation
 packages/scoring-engine  Initial crash-score heuristic
 packages/trace-model     Trace and timeline helpers
 examples/vulnerable-agent Synthetic local target for demos
@@ -97,7 +98,7 @@ Default local URLs:
 
 The studio loads data from the Fastify API by default at `http://localhost:4000`. Set `NEXT_PUBLIC_API_BASE_URL` to point the web app at a different mock API origin.
 
-Implemented Phase 1 endpoints:
+Implemented mock API endpoints:
 
 - `GET /health`
 - `GET /projects`
@@ -112,6 +113,7 @@ Implemented Phase 1 endpoints:
 - `GET /regressions`
 - `GET /regressions/:id`
 - `POST /regressions/mock`
+- `POST /regressions/:id/replay-mock`
 
 `POST /runs/mock` accepts:
 
@@ -125,17 +127,19 @@ Implemented Phase 1 endpoints:
 
 It creates an in-memory mock run that moves from `queued` to `running` to `needs_review` when polled through `GET /runs/:id`.
 
-`POST /regressions/mock` accepts a completed run ID and creates an in-memory mock regression artifact with a future replay command such as:
+`POST /regressions/mock` accepts a completed run ID and creates an in-memory mock regression artifact. Phase 2 artifacts include the agent target ID, deterministic mock seed, source run status, scenario engine version, expected finding categories, expected trace event types, and a local replay endpoint string such as:
 
-```bash
-pnpm failsafe replay tool-poisoning-pack-tool-poisoning-guardrail
+```txt
+POST /regressions/regression-tool-poisoning-pack-tool-poisoning-guardrail-a1b2c3/replay-mock
 ```
 
-The replay CLI is not implemented yet.
+`POST /regressions/:id/replay-mock` looks up the in-memory artifact, verifies it is marked mock replayable, reruns the deterministic synthetic scenario with the saved seed, stores a new in-memory replay run, and returns a typed `ScenarioRun`. It does not execute real tools, files, shell commands, network calls, LLM calls, MCP calls, Copilot calls, email, or database actions.
+
+The `pnpm failsafe replay ...` CLI is not implemented yet. Mock replay currently runs through the API and optional Studio button only.
 
 ## Demo Narrative
 
-Open the studio and show the FailSafe dashboard. The page loads the demo project, starter scenario packs, seeded run, findings, score, trace, and saved regressions from the API. Select a starter pack, click Run Crash Test, and watch the run move through queued and running states before it reaches needs_review. Click timeline events to inspect raw evidence, click finding cards to inspect root cause and mitigations, open Fix with Copilot to preview the bounded prompt payload, then Save Regression to create an in-memory mock regression artifact.
+Open the studio and show the FailSafe dashboard. The page loads the demo project, starter scenario packs, seeded run, findings, score, trace, and saved regressions from the API. Select a starter pack, click Run Crash Test, and watch the run move through queued and running states before it reaches needs_review. Click timeline events to inspect raw evidence, click finding cards to inspect root cause and mitigations, open Fix with Copilot to preview the bounded prompt payload, then Save Regression to create an in-memory mock regression artifact. Click Replay Mock on a saved artifact to rerun the same deterministic synthetic scenario through the safe mock replay endpoint.
 
 ## Safety Disclaimer
 
@@ -147,7 +151,7 @@ The current score is an initial product heuristic for demos and prioritization. 
 
 - Phase 0: repository foundation, docs, schemas, mock UI, mock API.
 - Phase 1: API-backed mock studio vertical slice with run lifecycle, evidence inspection, Copilot prompt preview, and regression artifacts.
-- Phase 2: scenario engine for deterministic defensive crash-test execution.
+- Phase 2: deterministic mock scenario engine and safe mock regression replay API.
 - Phase 3: sandbox runner with strict isolation and dry-run defaults.
 - Phase 4: Patch Coach with Copilot prompts, mitigation plans, and regression generation.
 - Phase 5: hackathon demo polish, architecture diagram, video script, and public repo cleanup.

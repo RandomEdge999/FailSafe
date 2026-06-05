@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { FindingCategorySchema } from "./finding";
+import { ScenarioRunStatusSchema } from "./run";
+import { TraceEventTypeSchema } from "./trace";
 
 export const RegressionArtifactStatusSchema = z.enum([
   "mock_saved",
@@ -11,6 +14,11 @@ export const RegressionArtifactSchema = z.object({
   runId: z.string().min(1),
   projectId: z.string().min(1),
   scenarioPackId: z.string().min(1),
+  agentTargetId: z.string().min(1),
+  seed: z.string().min(1),
+  sourceRunStatus: ScenarioRunStatusSchema,
+  mockReplayable: z.boolean(),
+  scenarioVersion: z.string().min(1),
   findingIds: z.array(z.string().min(1)),
   name: z.string().min(1),
   description: z.string(),
@@ -18,6 +26,8 @@ export const RegressionArtifactSchema = z.object({
   status: RegressionArtifactStatusSchema,
   replayCommand: z.string().min(1),
   expectedSafeBehavior: z.array(z.string()),
+  expectedFindingCategories: z.array(FindingCategorySchema),
+  expectedTraceEventTypes: z.array(TraceEventTypeSchema),
   traceEventIds: z.array(z.string().min(1))
 });
 

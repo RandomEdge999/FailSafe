@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@failsafe/scenario-engine':
+        specifier: workspace:*
+        version: link:packages/scenario-engine
       '@types/node':
         specifier: ^22.10.5
         version: 22.19.19
@@ -26,6 +29,9 @@ importers:
       '@failsafe/attack-packs':
         specifier: workspace:*
         version: link:../../packages/attack-packs
+      '@failsafe/scenario-engine':
+        specifier: workspace:*
+        version: link:../../packages/scenario-engine
       '@failsafe/schemas':
         specifier: workspace:*
         version: link:../../packages/schemas
@@ -94,6 +100,19 @@ importers:
       '@failsafe/schemas':
         specifier: workspace:*
         version: link:../schemas
+    devDependencies:
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+
+  packages/scenario-engine:
+    dependencies:
+      '@failsafe/schemas':
+        specifier: workspace:*
+        version: link:../schemas
+      '@failsafe/scoring-engine':
+        specifier: workspace:*
+        version: link:../scoring-engine
     devDependencies:
       typescript:
         specifier: ^5.7.3

@@ -37,18 +37,44 @@ Implemented notes:
 - `POST /regressions/mock` creates a typed artifact from completed run trace and findings.
 - The studio does not execute Copilot, live LLM calls, real MCP tools, real file operations, or replay commands.
 
-## Phase 2: Scenario Engine
+## Phase 2: Deterministic Mock Scenario Engine And Replay
 
-Build next:
+Status: implemented in the current Phase 2 pass.
+
+- Added `packages/scenario-engine` as a typed deterministic mock execution layer.
+- Moved scenario-specific trace, finding, and score generation out of the API run service.
+- Added shared execution schemas for mock scenario execution results.
+- Extended regression artifacts with agent target ID, seed, source run status, mock replayability, scenario version, expected finding categories, and expected trace event types.
+- Added `POST /regressions/:id/replay-mock` to create safe in-memory mock replay runs.
+- Added a Studio `Replay Mock` affordance for saved regression artifacts.
+- Extended `scripts/dev-check.ts` to validate all starter packs through the scenario engine and verify mock replay safety checks.
+
+Implemented notes:
+
+- Mock replay is API-only. The `pnpm failsafe replay ...` CLI remains unimplemented.
+- Replay runs use the saved deterministic seed and set `baselineRunId` to the source run.
+- The engine never executes real tools, file operations, shell commands, network calls, LLM calls, MCP calls, Copilot calls, email, or database actions.
+- Runs and regression artifacts remain in memory for the API process only.
+
+## Phase 2 Original Target
+
+Delivered:
 
 - Scenario pack runner contract.
 - Deterministic seeded execution mode.
-- Scenario step evaluator.
-- Expected safe behavior checks.
+- Scenario step to trace/finding mapping for the three starter packs.
+- Expected safe behavior context in regression artifacts.
 - Finding generation rules.
-- Mock agent adapter.
-- Regression artifact format.
-- Regression replay command implementation for mock artifacts.
+- Mock scenario engine adapter used by the API.
+- Regression artifact replay context.
+- API mock replay implementation for mock artifacts.
+
+Still deferred:
+
+- Full scenario step evaluator.
+- Real mock-agent adapter process.
+- CLI replay command.
+- Before/after run comparison.
 
 ## Phase 3: Sandbox Runner
 
@@ -87,8 +113,8 @@ Build:
 
 ## What Each Future Agent Should Build Next
 
-1. Scenario agent: define a scenario execution interface and implement deterministic mock checks.
-2. Safety agent: harden safety policy enforcement and add tests for forbidden live targets.
-3. Replay agent: implement a non-destructive mock regression replay command.
-4. Frontend agent: add before/after run comparison once replay exists.
+1. Replay agent: implement a non-destructive CLI that calls the running mock API and fails gracefully when the API is unavailable.
+2. Frontend agent: add before/after run comparison for baseline and replay timelines.
+3. Safety agent: harden safety policy enforcement and add tests for forbidden live targets.
+4. Scenario agent: expand the deterministic step evaluator without adding real runner behavior.
 5. Demo agent: create a polished five-minute script, screenshots, and presentation outline.

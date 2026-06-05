@@ -1,4 +1,5 @@
 export * from "./agent-target";
+export * from "./execution";
 export * from "./finding";
 export * from "./project";
 export * from "./regression";

@@ -3,7 +3,8 @@ import { CreateMockRegressionInputSchema } from "@failsafe/schemas";
 import {
   createMockRegression,
   getRegressionById,
-  listRegressions
+  listRegressions,
+  replayMockRegression
 } from "../services/regression-service";
 
 export async function registerRegressionRoutes(app: FastifyInstance) {
@@ -31,5 +32,11 @@ export async function registerRegressionRoutes(app: FastifyInstance) {
     }
 
     return reply.code(201).send(createMockRegression(parsed.data));
+  });
+
+  app.post("/regressions/:id/replay-mock", async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    return reply.code(201).send(replayMockRegression(id));
   });
 }

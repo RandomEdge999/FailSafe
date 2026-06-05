@@ -12,6 +12,7 @@
   "dependencies": {
     "@fastify/cors": "^10.0.2",
     "@failsafe/attack-packs": "workspace:*",
+    "@failsafe/scenario-engine": "workspace:*",
     "@failsafe/schemas": "workspace:*",
     "@failsafe/scoring-engine": "workspace:*",
     "fastify": "^5.2.1"
