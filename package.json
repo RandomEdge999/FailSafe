@@ -1,0 +1,22 @@
+{
+  "name": "failsafe",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FailSafe: A Crash-Test Studio for AI Agents.",
+  "packageManager": "pnpm@10.32.1",
+  "scripts": {
+    "dev": "concurrently -n api,web -c cyan,green \"pnpm --filter @failsafe/orchestrator-api dev\" \"pnpm --filter @failsafe/studio-web dev\"",
+    "dev:api": "pnpm --filter @failsafe/orchestrator-api dev",
+    "dev:web": "pnpm --filter @failsafe/studio-web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "dev:check": "tsx scripts/dev-check.ts",
+    "check": "pnpm dev:check && pnpm typecheck"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "concurrently": "^9.1.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

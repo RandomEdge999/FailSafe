@@ -1,0 +1,23 @@
+{
+  "id": "agent-invoice-reviewer",
+  "name": "Invoice Reviewer Mock Agent",
+  "type": "mock-agent",
+  "entrypoint": "mock://invoice-reviewer",
+  "environmentMode": "demo",
+  "approvalMode": "manual-required",
+  "instructionFiles": [
+    "README.md",
+    "agent-config.json"
+  ],
+  "allowedActions": [
+    "summarize_invoice",
+    "flag_suspicious_content",
+    "request_human_approval"
+  ],
+  "blockedActionsInDemoMode": [
+    "read_private_notes",
+    "write_files",
+    "send_email",
+    "call_external_network"
+  ]
+}

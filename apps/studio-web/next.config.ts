@@ -1,0 +1,11 @@
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  transpilePackages: [
+    "@failsafe/attack-packs",
+    "@failsafe/schemas",
+    "@failsafe/scoring-engine"
+  ]
+};
+
+export default nextConfig;
