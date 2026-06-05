@@ -31,15 +31,15 @@ FailSafe is built for the Microsoft Agents League Hackathon, Creative Apps categ
 
 ## Current MVP Scope
 
-This foundation commit includes a runnable mock studio, mock orchestrator API, shared Zod schemas, starter defensive scenario packs, a scoring heuristic, example vulnerable-agent inputs, docs, Copilot instructions, prompt files, and custom agent instruction files.
+The current Phase 1 slice includes a runnable API-backed mock studio, mock orchestrator API, shared Zod schemas, starter defensive scenario packs, a scoring heuristic, example vulnerable-agent inputs, in-memory mock run lifecycle state, in-memory regression artifacts, docs, Copilot instructions, prompt files, and custom agent instruction files.
 
-It does not yet include real sandbox execution, live LLM calls, real MCP introspection, persistence, queues, or destructive tool execution.
+It does not include real sandbox execution, live LLM calls, real MCP introspection or execution, PostgreSQL persistence, queues, authentication, deployment infrastructure, or destructive tool execution.
 
 ## Architecture Overview
 
 ```txt
 apps/studio-web          Next.js dashboard and mock crash-lab UI
-apps/orchestrator-api    Fastify API shell for projects, scenarios, runs, and findings
+apps/orchestrator-api    Fastify mock API for projects, scenarios, runs, findings, and regressions
 packages/schemas         Shared Zod schemas and TypeScript types
 packages/attack-packs    Typed starter defensive scenario packs
 packages/scoring-engine  Initial crash-score heuristic
@@ -84,6 +84,7 @@ Validate the foundation:
 
 ```bash
 pnpm check
+pnpm build
 ```
 
 Default local URLs:
@@ -92,9 +93,49 @@ Default local URLs:
 - API health: http://localhost:4000/health
 - Mock scenarios: http://localhost:4000/scenarios
 
+## Mock API Endpoints
+
+The studio loads data from the Fastify API by default at `http://localhost:4000`. Set `NEXT_PUBLIC_API_BASE_URL` to point the web app at a different mock API origin.
+
+Implemented Phase 1 endpoints:
+
+- `GET /health`
+- `GET /projects`
+- `GET /projects/:id`
+- `GET /scenarios`
+- `GET /scenarios/:id`
+- `GET /runs`
+- `GET /runs/:id`
+- `POST /runs/mock`
+- `GET /findings`
+- `GET /findings/:id`
+- `GET /regressions`
+- `GET /regressions/:id`
+- `POST /regressions/mock`
+
+`POST /runs/mock` accepts:
+
+```json
+{
+  "projectId": "project-vulnerable-agent",
+  "scenarioPackId": "pack-tool-poisoning",
+  "agentTargetId": "agent-invoice-reviewer"
+}
+```
+
+It creates an in-memory mock run that moves from `queued` to `running` to `needs_review` when polled through `GET /runs/:id`.
+
+`POST /regressions/mock` accepts a completed run ID and creates an in-memory mock regression artifact with a future replay command such as:
+
+```bash
+pnpm failsafe replay tool-poisoning-pack-tool-poisoning-guardrail
+```
+
+The replay CLI is not implemented yet.
+
 ## Demo Narrative
 
-Open the studio and show the FailSafe dashboard. Select the Tool Poisoning Pack, run the mock crash test, and walk through the timeline. The demo shows how untrusted MCP metadata crosses a trust boundary, how the policy layer blocks the risky action, how the scorecard explains severity, and how the finding card turns the failure into a Copilot-ready mitigation and regression path.
+Open the studio and show the FailSafe dashboard. The page loads the demo project, starter scenario packs, seeded run, findings, score, trace, and saved regressions from the API. Select a starter pack, click Run Crash Test, and watch the run move through queued and running states before it reaches needs_review. Click timeline events to inspect raw evidence, click finding cards to inspect root cause and mitigations, open Fix with Copilot to preview the bounded prompt payload, then Save Regression to create an in-memory mock regression artifact.
 
 ## Safety Disclaimer
 
@@ -105,7 +146,7 @@ The current score is an initial product heuristic for demos and prioritization. 
 ## Roadmap
 
 - Phase 0: repository foundation, docs, schemas, mock UI, mock API.
-- Phase 1: mock studio vertical slice with API-backed state and regression artifacts.
+- Phase 1: API-backed mock studio vertical slice with run lifecycle, evidence inspection, Copilot prompt preview, and regression artifacts.
 - Phase 2: scenario engine for deterministic defensive crash-test execution.
 - Phase 3: sandbox runner with strict isolation and dry-run defaults.
 - Phase 4: Patch Coach with Copilot prompts, mitigation plans, and regression generation.

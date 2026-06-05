@@ -26,5 +26,12 @@ export const ScenarioRunSchema = z.object({
   trace: z.array(TraceEventSchema)
 });
 
+export const CreateMockRunInputSchema = z.object({
+  projectId: z.string().min(1),
+  scenarioPackId: z.string().min(1),
+  agentTargetId: z.string().min(1).optional()
+});
+
 export type ScenarioRunStatus = z.infer<typeof ScenarioRunStatusSchema>;
 export type ScenarioRun = z.infer<typeof ScenarioRunSchema>;
+export type CreateMockRunInput = z.infer<typeof CreateMockRunInputSchema>;

@@ -53,7 +53,7 @@ export function ScenarioLibrary({
                 <div>
                   <p className="text-sm font-semibold text-white">{pack.name}</p>
                   <p className="mt-1 text-xs text-slate-400">
-                    {categoryLabel[pack.category]} · {pack.difficulty}
+                    {categoryLabel[pack.category]} / {pack.difficulty}
                   </p>
                 </div>
                 {selected ? (

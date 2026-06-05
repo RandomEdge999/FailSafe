@@ -3,11 +3,31 @@
 import { Bot, Play, Save, WandSparkles } from "lucide-react";
 
 type DashboardHeaderProps = {
+  canFix: boolean;
+  canRun: boolean;
+  canSave: boolean;
   isRunning: boolean;
+  isSavingRegression: boolean;
+  onFixWithCopilot: () => void;
   onRun: () => void;
+  onSaveRegression: () => void;
+  runStatus?: string;
 };
 
-export function DashboardHeader({ isRunning, onRun }: DashboardHeaderProps) {
+export function DashboardHeader({
+  canFix,
+  canRun,
+  canSave,
+  isRunning,
+  isSavingRegression,
+  onFixWithCopilot,
+  onRun,
+  onSaveRegression,
+  runStatus
+}: DashboardHeaderProps) {
+  const buttonDisabledClass =
+    "disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500";
+
   return (
     <header className="flex flex-col gap-5 border-b border-white/10 bg-ink/80 px-5 py-5 backdrop-blur md:px-8 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex min-w-0 items-start gap-4">
@@ -27,25 +47,34 @@ export function DashboardHeader({ isRunning, onRun }: DashboardHeaderProps) {
       <div className="flex flex-wrap gap-3">
         <button
           type="button"
+          disabled={!canRun || isRunning}
           onClick={onRun}
-          className="inline-flex min-h-11 items-center gap-2 rounded-md bg-signal px-4 py-2 text-sm font-semibold text-ink transition hover:bg-cyan-300"
+          className={`inline-flex min-h-11 items-center gap-2 rounded-md bg-signal px-4 py-2 text-sm font-semibold text-ink transition hover:bg-cyan-300 ${buttonDisabledClass}`}
         >
           <Play className="h-4 w-4" aria-hidden="true" />
-          {isRunning ? "Running..." : "Run Crash Test"}
+          {isRunning
+            ? runStatus === "queued"
+              ? "Queued..."
+              : "Running..."
+            : "Run Crash Test"}
         </button>
         <button
           type="button"
-          className="inline-flex min-h-11 items-center gap-2 rounded-md border border-white/15 bg-white/8 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/15"
+          disabled={!canFix}
+          onClick={onFixWithCopilot}
+          className={`inline-flex min-h-11 items-center gap-2 rounded-md border border-white/15 bg-white/8 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/15 ${buttonDisabledClass}`}
         >
           <WandSparkles className="h-4 w-4" aria-hidden="true" />
           Fix with Copilot
         </button>
         <button
           type="button"
-          className="inline-flex min-h-11 items-center gap-2 rounded-md border border-white/15 bg-white/8 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/15"
+          disabled={!canSave || isSavingRegression}
+          onClick={onSaveRegression}
+          className={`inline-flex min-h-11 items-center gap-2 rounded-md border border-white/15 bg-white/8 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/15 ${buttonDisabledClass}`}
         >
           <Save className="h-4 w-4" aria-hidden="true" />
-          Save Regression
+          {isSavingRegression ? "Saving..." : "Save Regression"}
         </button>
       </div>
     </header>

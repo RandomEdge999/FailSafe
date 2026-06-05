@@ -3,6 +3,8 @@ import { AlertOctagon } from "lucide-react";
 
 type FindingCardProps = {
   finding: Finding;
+  isSelected: boolean;
+  onSelect: (finding: Finding) => void;
 };
 
 const severityClass: Record<Finding["severity"], string> = {
@@ -13,9 +15,19 @@ const severityClass: Record<Finding["severity"], string> = {
   critical: "text-white bg-danger"
 };
 
-export function FindingCard({ finding }: FindingCardProps) {
+export function FindingCard({ finding, isSelected, onSelect }: FindingCardProps) {
   return (
-    <article className="rounded-lg border border-white/10 bg-panel p-4 shadow-lab">
+    <article
+      className={`rounded-lg border p-4 shadow-lab transition ${
+        isSelected ? "border-signal bg-signal/10" : "border-white/10 bg-panel"
+      }`}
+    >
+      <button
+        type="button"
+        aria-pressed={isSelected}
+        onClick={() => onSelect(finding)}
+        className="w-full text-left"
+      >
       <div className="flex items-start gap-3">
         <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-danger/15 text-danger">
           <AlertOctagon className="h-5 w-5" aria-hidden="true" />
@@ -59,6 +71,7 @@ export function FindingCard({ finding }: FindingCardProps) {
           </div>
         </div>
       </div>
+      </button>
     </article>
   );
 }

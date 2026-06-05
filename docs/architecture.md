@@ -2,7 +2,7 @@
 
 ## System Architecture
 
-FailSafe is a TypeScript-first monorepo. The foundation uses a Next.js studio, Fastify orchestrator API, shared Zod schemas, typed scenario packs, scoring helpers, trace helpers, and synthetic demo data.
+FailSafe is a TypeScript-first monorepo. The Phase 1 slice uses a Next.js studio, Fastify orchestrator API, shared Zod schemas, typed scenario packs, scoring helpers, trace helpers, and synthetic demo data. The studio now loads its project, scenario, run, finding, trace, score, and regression state from the API instead of local-only frontend data.
 
 ```mermaid
 flowchart LR
@@ -12,7 +12,7 @@ flowchart LR
   API --> Packs["attack-packs<br/>defensive packs"]
   API --> Scoring["scoring-engine<br/>heuristic score"]
   API --> Trace["trace-model<br/>timeline helpers"]
-  API --> MockData["mock data<br/>projects, runs, findings"]
+  API --> MockData["in-memory mock data<br/>projects, runs, findings, regressions"]
   FutureRunner["future sandbox runner"] -.-> API
   FutureStore["future PostgreSQL"] -.-> API
   FutureQueue["future Redis/BullMQ"] -.-> API
@@ -24,11 +24,11 @@ flowchart LR
 
 ### `apps/studio-web`
 
-Renders the FailSafe Studio dashboard. The current implementation uses local mock data and shared schemas. Future work should move data fetching to the orchestrator API while keeping the UI contract stable.
+Renders the FailSafe Studio dashboard. The current implementation uses a typed API client pointed at `NEXT_PUBLIC_API_BASE_URL` or `http://localhost:4000`. It handles loading, API unavailable, queued, running, completed, no-finding, Copilot preview, and saved-regression states.
 
 ### `apps/orchestrator-api`
 
-Owns HTTP routes for health, projects, scenarios, runs, and findings. The current API returns mock data. Future work should add persistence, run orchestration, sandbox dispatch, trace collection, and regression artifacts.
+Owns HTTP routes for health, projects, scenarios, runs, findings, and regressions. The current API returns mock data and stores created mock runs and regression artifacts in memory for the server process. Future work should add persistence, real run orchestration, sandbox dispatch, trace collection from a runner, and replay execution.
 
 ### `packages/schemas`
 
@@ -48,15 +48,15 @@ Provides trace-event parsing and timeline grouping helpers. Future work can add 
 
 ## Data Flow
 
-1. Studio loads projects and scenario packs.
-2. User selects a scenario pack.
-3. Studio starts a run through the orchestrator.
-4. Orchestrator creates a run record.
-5. Runner emits trace events.
-6. Scoring engine calculates score factors.
-7. Crash analyst creates findings from trace evidence.
-8. Studio renders timeline, scorecard, and findings.
-9. User invokes Copilot prompts for mitigation and regression generation.
+1. Studio checks `GET /health`.
+2. Studio loads projects, scenario packs, seeded runs, and regression artifacts from the orchestrator API.
+3. User selects a scenario pack.
+4. Studio starts a synthetic run through `POST /runs/mock`.
+5. Orchestrator creates an in-memory run and materializes `queued`, `running`, and `needs_review` states when `GET /runs/:id` is polled.
+6. Studio renders timeline events, scorecard factors, and findings from the API response.
+7. User selects a timeline event to inspect metadata and raw evidence.
+8. User selects a finding to inspect root cause, mitigations, and a Copilot prompt preview.
+9. User saves a regression through `POST /regressions/mock`; the API creates an in-memory artifact with finding IDs, trace event IDs, expected safe behavior, and a future replay command.
 
 ## Trace Flow
 
@@ -75,6 +75,25 @@ Trace events use the shared `TraceEvent` schema:
 - `metadata`
 
 Trace events should preserve provenance. Untrusted content, tool output, MCP metadata, repository files, and external network content must be labeled before they can influence model instructions or tool calls.
+
+## Regression Artifact Flow
+
+Phase 1 adds a shared `RegressionArtifact` schema with:
+
+- `id`
+- `runId`
+- `projectId`
+- `scenarioPackId`
+- `findingIds`
+- `name`
+- `description`
+- `createdAt`
+- `status`
+- `replayCommand`
+- `expectedSafeBehavior`
+- `traceEventIds`
+
+Regression artifacts are currently in-memory mock records only. They do not write files, update a database, or execute replay commands.
 
 ## Future Sandbox Runner Design
 

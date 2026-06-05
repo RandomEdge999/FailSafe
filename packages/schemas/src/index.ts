@@ -1,6 +1,7 @@
 export * from "./agent-target";
 export * from "./finding";
 export * from "./project";
+export * from "./regression";
 export * from "./run";
 export * from "./scenario";
 export * from "./score";

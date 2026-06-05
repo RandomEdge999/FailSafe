@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { CreateMockRunInputSchema } from "@failsafe/schemas";
 import { createMockRun, getRunById, listRuns } from "../services/run-service";
 
 export async function registerRunRoutes(app: FastifyInstance) {
@@ -15,7 +16,16 @@ export async function registerRunRoutes(app: FastifyInstance) {
     return run;
   });
 
-  app.post("/runs/mock", async (_request, reply) =>
-    reply.code(201).send(createMockRun())
-  );
+  app.post("/runs/mock", async (request, reply) => {
+    const parsed = CreateMockRunInputSchema.safeParse(request.body);
+
+    if (!parsed.success) {
+      return reply.code(400).send({
+        error: "invalid_mock_run_input",
+        issues: parsed.error.issues
+      });
+    }
+
+    return reply.code(201).send(createMockRun(parsed.data));
+  });
 }

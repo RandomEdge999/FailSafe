@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { registerFindingRoutes } from "./routes/findings";
 import { registerHealthRoutes } from "./routes/health";
 import { registerProjectRoutes } from "./routes/projects";
+import { registerRegressionRoutes } from "./routes/regressions";
 import { registerRunRoutes } from "./routes/runs";
 import { registerScenarioRoutes } from "./routes/scenarios";
 
@@ -24,6 +25,7 @@ export async function buildServer() {
   await registerScenarioRoutes(app);
   await registerRunRoutes(app);
   await registerFindingRoutes(app);
+  await registerRegressionRoutes(app);
 
   app.setErrorHandler((error, _request, reply) => {
     const errorRecord =

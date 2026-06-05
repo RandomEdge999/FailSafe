@@ -2,7 +2,7 @@
 
 ## Phase 0: Foundation
 
-Status: current phase.
+Status: complete in foundation commit.
 
 Deliver:
 
@@ -19,19 +19,27 @@ Deliver:
 
 ## Phase 1: Mock Studio Vertical Slice
 
-Next agent should build:
+Status: implemented in the current Phase 1 pass.
 
 - API-backed studio data loading.
-- Run state transitions: queued, running, needs_review, passed.
+- Run state transitions: queued, running, needs_review.
 - Mock run creation tied to selected scenario pack.
 - Event detail drawer for raw trace evidence.
 - Finding-to-Copilot prompt handoff UI.
 - Save regression mock artifact.
-- Lightweight component tests or Playwright smoke test.
+- Lightweight dev check coverage for the regression artifact schema.
+
+Implemented notes:
+
+- Runs and regressions are stored in memory for the API server process only.
+- `POST /runs/mock` accepts selected project, scenario pack, and optional agent target context.
+- `GET /runs/:id` materializes a short synthetic lifecycle for frontend polling.
+- `POST /regressions/mock` creates a typed artifact from completed run trace and findings.
+- The studio does not execute Copilot, live LLM calls, real MCP tools, real file operations, or replay commands.
 
 ## Phase 2: Scenario Engine
 
-Build:
+Build next:
 
 - Scenario pack runner contract.
 - Deterministic seeded execution mode.
@@ -40,6 +48,7 @@ Build:
 - Finding generation rules.
 - Mock agent adapter.
 - Regression artifact format.
+- Regression replay command implementation for mock artifacts.
 
 ## Phase 3: Sandbox Runner
 
@@ -78,8 +87,8 @@ Build:
 
 ## What Each Future Agent Should Build Next
 
-1. Frontend agent: wire the dashboard to the Fastify API and add event detail interactions.
-2. Backend agent: add mock run lifecycle state and regression artifact endpoints.
-3. Scenario agent: define a scenario execution interface and implement deterministic mock checks.
-4. Safety agent: harden safety policy enforcement and add tests for forbidden live targets.
+1. Scenario agent: define a scenario execution interface and implement deterministic mock checks.
+2. Safety agent: harden safety policy enforcement and add tests for forbidden live targets.
+3. Replay agent: implement a non-destructive mock regression replay command.
+4. Frontend agent: add before/after run comparison once replay exists.
 5. Demo agent: create a polished five-minute script, screenshots, and presentation outline.
