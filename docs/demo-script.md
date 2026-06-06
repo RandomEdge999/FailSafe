@@ -42,7 +42,20 @@ Click Replay Mock on the saved artifact. The UI calls `POST /regressions/:id/rep
 
 Show the Baseline vs Replay panel. Explain that the UI calls `GET /runs/:id/comparison` for the replay run and compares status, score delta, finding count delta, trace event count delta, matching trace event types, missing expected trace event types, and new replay trace event types. Emphasize that this compares two synthetic mock runs. It does not prove a real mitigation worked, and no patched-agent sandbox execution exists yet.
 
-## 4:20 - Boundaries And Limitations
+## 4:20 - Runner Readiness And Boundaries
+
+Show the Runner Readiness panel. Explain that Phase 3A adds a reviewed dry-run runner contract and deny-by-default policy preview, not real sandbox execution. Point out the current mode:
+
+- mock + dry_run policy preview
+- real sandbox execution: not implemented
+- file writes: blocked
+- shell commands: blocked
+- network requests: blocked
+- MCP execution: not implemented
+- LLM calls: not implemented
+- email and database actions: blocked
+
+Explain that `POST /runner/dry-run` can model policy decisions and trace-like evidence for intended actions, but every result returns `executed: false` and `dryRunOnly: true`.
 
 Point out what remains intentionally mocked: no real tools, file operations, shell commands, network calls, LLM calls, MCP execution, Copilot invocation, email, database actions, persistence, auth, queues, or deployment infrastructure.
 
@@ -51,11 +64,12 @@ Optionally show the safe local CLI while the API is still running:
 ```bash
 pnpm failsafe regressions
 pnpm failsafe replay <regression-id>
+pnpm failsafe runner preview
 ```
 
-Explain that the CLI only calls the mock API, only works with in-memory regressions from the current API process, and does not execute tools or shell commands.
+Explain that the CLI only calls the mock API, only works with in-memory regressions from the current API process, and does not execute tools, shell commands, file actions, network requests, MCP servers, model calls, email, databases, or external systems.
 
-## 4:40 - Microsoft and Copilot Angle
+## 4:45 - Microsoft and Copilot Angle
 
 Close with the project fit:
 

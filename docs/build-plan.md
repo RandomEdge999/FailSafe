@@ -75,6 +75,26 @@ Implemented notes:
 - The comparison panel compares synthetic mock runs only and does not prove real mitigation success.
 - No persistence, sandbox runner, real Copilot invocation, live LLM call, MCP execution, file operation, shell execution, email action, network action, or database action was added.
 
+## Phase 3A: Reviewed Dry-Run Runner Contract And Policy Preview
+
+Status: implemented in the current Phase 3A pass.
+
+- Added shared runner schemas for modes, action kinds, action risk, policy decisions, intended actions, policy violations, dry-run results, trace-like evidence, and capability manifest.
+- Added a deny-by-default dry-run runner policy helper in `packages/scenario-engine`.
+- Added `POST /runner/dry-run` to validate intended actions and return typed policy decisions.
+- Added `pnpm failsafe runner --help` and `pnpm failsafe runner preview`.
+- Added a Studio Runner Readiness panel that states real sandbox execution is not implemented.
+- Extended `scripts/dev-check.ts` to validate runner schemas, capability manifest, deny-by-default behavior, blocked actions, not-implemented MCP/model calls, `executed: false`, `dryRunOnly: true`, and CLI help.
+
+Implemented notes:
+
+- The dry-run result never executes actions.
+- Synthetic low-risk file-read intent can be modeled as policy-preview allowed without reading arbitrary files.
+- File writes, shell commands, network requests, email sends, and database queries are blocked.
+- MCP tool calls and model calls are marked not implemented.
+- Dry-run policy preview is not runtime isolation and does not prove a patched agent is safe.
+- No Docker, gVisor, background worker, live LLM call, MCP execution, file operation, shell execution, network action, email action, database action, persistence, auth, Redis, PostgreSQL, or deployment infrastructure was added.
+
 ## Phase 2 Original Target
 
 Delivered:
@@ -95,7 +115,7 @@ Still deferred:
 - Patched-agent before/after comparison from a reviewed sandbox runner.
 - Persistent regression storage.
 
-## Phase 3: Sandbox Runner
+## Phase 3B: Reviewed Sandbox Runner
 
 Build:
 
@@ -132,7 +152,7 @@ Build:
 
 ## What Each Future Agent Should Build Next
 
-1. Sandbox agent: add a reviewed dry-run sandbox runner with deny-by-default file, shell, network, email, and database policies.
+1. Sandbox agent: turn the Phase 3A contract into a reviewed local sandbox prototype with strict isolation, while keeping dry-run defaults.
 2. Persistence agent: design durable regression storage without changing the mock-only safety defaults.
 3. Patch Coach agent: connect findings to richer Copilot prompt payloads while keeping UI invocation mocked until explicitly promoted.
 4. Safety agent: harden safety policy enforcement and add tests for forbidden live targets.

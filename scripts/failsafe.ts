@@ -1,7 +1,9 @@
 import {
   RegressionArtifactSchema,
+  RunnerDryRunResultSchema,
   ScenarioRunSchema,
   type RegressionArtifact,
+  type RunnerDryRunResult,
   type ScenarioRun
 } from "@failsafe/schemas";
 
@@ -29,6 +31,8 @@ Usage:
   pnpm failsafe regressions
   pnpm failsafe replay --help
   pnpm failsafe replay <regression-id>
+  pnpm failsafe runner --help
+  pnpm failsafe runner preview
 
 Environment:
   FAILSAFE_API_BASE_URL  Override the mock API base URL. Default: http://localhost:4000
@@ -55,8 +59,27 @@ Behavior:
 
 Notes:
   Start the mock API with \`pnpm dev:api\`.
-  This CLI only calls the mock API; it does not execute tools or shell commands.
+  This CLI only calls the mock API; it does not execute tools, shell commands,
+  file actions, network calls, MCP servers, model calls, email, databases, or
+  external systems.
   In-memory regressions disappear when the API process restarts.`);
+}
+
+function printRunnerHelp() {
+  console.log(`FailSafe dry-run runner preview
+
+Usage:
+  pnpm failsafe runner preview
+
+Behavior:
+  Calls POST /runner/dry-run on the running mock API with a synthetic action
+  list, then prints deny-by-default policy decisions.
+
+Notes:
+  Start the mock API with \`pnpm dev:api\`.
+  This is a policy preview only. It does not execute tools, shell commands,
+  file actions, network calls, MCP servers, model calls, email, databases, or
+  external systems.`);
 }
 
 function delay(ms: number) {
@@ -84,7 +107,7 @@ async function requestJson<T>(
     });
   } catch (error) {
     throw new CliError(
-      `FailSafe mock API is unavailable at ${apiBaseUrl}. Start the mock API with \`pnpm dev:api\`.\nThis CLI only calls the mock API; it does not execute tools or shell commands.`
+      `FailSafe mock API is unavailable at ${apiBaseUrl}. Start the mock API with \`pnpm dev:api\`.\nThis CLI only calls the mock API; it does not execute tools, shell commands, file actions, network calls, MCP servers, model calls, email, databases, or external systems.`
     );
   }
 
@@ -100,7 +123,7 @@ async function requestJson<T>(
         : `Mock API request failed with HTTP ${response.status}.`;
 
     throw new CliError(
-      `${message}\nStart the mock API with \`pnpm dev:api\`.\nThis CLI only calls the mock API; it does not execute tools or shell commands.`
+      `${message}\nStart the mock API with \`pnpm dev:api\`.\nThis CLI only calls the mock API; it does not execute tools, shell commands, file actions, network calls, MCP servers, model calls, email, databases, or external systems.`
     );
   }
 
@@ -194,6 +217,94 @@ async function replayRegression(regressionId: string | undefined) {
   );
 }
 
+function runnerPreviewPayload() {
+  return {
+    projectId: "project-vulnerable-agent",
+    scenarioPackId: "pack-tool-poisoning",
+    actions: [
+      {
+        id: "cli-preview-read-synthetic-invoice",
+        kind: "file_read",
+        label: "Read synthetic invoice fixture",
+        target: "synthetic:invoice-fixture",
+        risk: "low",
+        synthetic: true
+      },
+      {
+        id: "cli-preview-write-report",
+        kind: "file_write",
+        label: "Write generated report",
+        target: "workspace:report.md",
+        risk: "high",
+        synthetic: true
+      },
+      {
+        id: "cli-preview-shell-command",
+        kind: "shell_command",
+        label: "Run package script",
+        target: "shell:pnpm test",
+        risk: "high"
+      },
+      {
+        id: "cli-preview-network",
+        kind: "network_request",
+        label: "Call external endpoint",
+        target: "https://example.invalid",
+        risk: "high"
+      },
+      {
+        id: "cli-preview-mcp",
+        kind: "mcp_tool_call",
+        label: "Call MCP invoice lookup",
+        target: "mcp:invoice-tools.lookup",
+        risk: "high"
+      },
+      {
+        id: "cli-preview-model",
+        kind: "model_call",
+        label: "Call hosted model",
+        target: "model:gpt-preview",
+        risk: "high"
+      }
+    ]
+  };
+}
+
+function printRunnerPreview(result: RunnerDryRunResult) {
+  console.log("FailSafe dry-run runner preview complete");
+  console.log(`API base URL: ${apiBaseUrl}`);
+  console.log(`Mode: ${result.mode}`);
+  console.log(`Executed: ${result.executed}`);
+  console.log(`Dry-run only: ${result.dryRunOnly}`);
+  console.log(`Blocked actions: ${result.blockedActionCount}`);
+  console.log(`Requires approval: ${result.requiresApprovalCount}`);
+  console.log(`Not implemented: ${result.notImplementedCount}`);
+  console.log("Decisions:");
+
+  for (const decision of result.decisions) {
+    console.log(
+      `- ${decision.actionKind} | ${decision.decision} | ${decision.actionLabel} | ${decision.reason}`
+    );
+  }
+
+  console.log(
+    "Policy preview only: no tools, shell commands, files, network requests, MCP servers, model calls, email, databases, or external systems were executed."
+  );
+}
+
+async function previewRunnerPolicy() {
+  const result = await requestJson(
+    "/runner/dry-run",
+    (value) => RunnerDryRunResultSchema.parse(value),
+    {
+      body: JSON.stringify(runnerPreviewPayload()),
+      method: "POST"
+    }
+  );
+
+  printRunnerPreview(result);
+}
+
 async function main() {
   const [, , command, ...args] = process.argv;
 
@@ -212,6 +323,24 @@ async function main() {
 
     await replayRegression(regressionId);
     return;
+  }
+
+  if (command === "runner") {
+    const [subcommand] = args;
+
+    if (!subcommand || subcommand === "--help" || subcommand === "-h") {
+      printRunnerHelp();
+      return;
+    }
+
+    if (subcommand === "preview") {
+      await previewRunnerPolicy();
+      return;
+    }
+
+    throw new CliError(
+      `Unknown runner command: ${subcommand}. Run \`pnpm failsafe runner --help\`.`
+    );
   }
 
   if (command === "regressions") {

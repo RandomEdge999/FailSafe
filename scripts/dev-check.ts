@@ -3,13 +3,18 @@ import {
   MOCK_SCENARIO_VERSION,
   compareMockReplayRuns,
   deriveMockScenarioSeed,
+  dryRunRunnerCapabilityManifest,
   executeMockScenario,
-  findMockScenarioSafetyIssues
+  findMockScenarioSafetyIssues,
+  previewDryRunRunner
 } from "@failsafe/scenario-engine";
 import { calculateCrashScore } from "@failsafe/scoring-engine";
 import {
   RegressionArtifactSchema,
   ReplayComparisonSchema,
+  RunnerActionSchema,
+  RunnerCapabilityManifestSchema,
+  RunnerDryRunResultSchema,
   ScenarioPackSchema,
   ScenarioRunSchema
 } from "@failsafe/schemas";
@@ -181,6 +186,121 @@ if (replayComparison.missingExpectedTraceEventTypes.length > 0) {
   );
 }
 
+RunnerCapabilityManifestSchema.parse(dryRunRunnerCapabilityManifest);
+
+const runnerActions = RunnerActionSchema.array().parse([
+  {
+    id: "action-read-synthetic-invoice",
+    kind: "file_read",
+    label: "Read synthetic invoice input",
+    target: "synthetic:invoice-fixture",
+    risk: "low",
+    synthetic: true
+  },
+  {
+    id: "action-write-output-file",
+    kind: "file_write",
+    label: "Write generated output file",
+    target: "workspace:generated-report.md",
+    risk: "high",
+    synthetic: true
+  },
+  {
+    id: "action-run-shell-command",
+    kind: "shell_command",
+    label: "Run package script",
+    target: "shell:pnpm test",
+    risk: "high"
+  },
+  {
+    id: "action-contact-network",
+    kind: "network_request",
+    label: "Contact external endpoint",
+    target: "https://example.invalid",
+    risk: "high"
+  },
+  {
+    id: "action-call-mcp-tool",
+    kind: "mcp_tool_call",
+    label: "Call MCP invoice tool",
+    target: "mcp:invoice-tools.lookup",
+    risk: "high"
+  },
+  {
+    id: "action-send-email",
+    kind: "email_send",
+    label: "Send invoice approval email",
+    target: "mail:finance-review",
+    risk: "high"
+  },
+  {
+    id: "action-query-database",
+    kind: "database_query",
+    label: "Query invoice database",
+    target: "db:invoice-records",
+    risk: "high"
+  },
+  {
+    id: "action-call-model",
+    kind: "model_call",
+    label: "Call hosted model",
+    target: "model:gpt-preview",
+    risk: "high"
+  }
+]);
+const runnerDryRun = RunnerDryRunResultSchema.parse(
+  previewDryRunRunner({
+    projectId: project.id,
+    scenarioPackId: scenarioPack.id,
+    actions: runnerActions
+  })
+);
+
+function runnerDecisionFor(actionId: string) {
+  const decision = runnerDryRun.decisions.find(
+    (item) => item.actionId === actionId
+  );
+
+  if (!decision) {
+    throw new Error(`Missing runner dry-run decision for ${actionId}.`);
+  }
+
+  return decision;
+}
+
+if (runnerDryRun.executed !== false) {
+  throw new Error("Dry-run runner reported executed=true.");
+}
+
+if (runnerDryRun.dryRunOnly !== true) {
+  throw new Error("Dry-run runner did not preserve dryRunOnly=true.");
+}
+
+if (
+  runnerDecisionFor("action-write-output-file").decision !== "blocked" ||
+  runnerDecisionFor("action-run-shell-command").decision !== "blocked" ||
+  runnerDecisionFor("action-contact-network").decision !== "blocked" ||
+  runnerDecisionFor("action-send-email").decision !== "blocked" ||
+  runnerDecisionFor("action-query-database").decision !== "blocked"
+) {
+  throw new Error(
+    "Dry-run runner failed to block file write, shell, network, email, or database actions."
+  );
+}
+
+if (
+  runnerDecisionFor("action-call-mcp-tool").decision !== "not_implemented" ||
+  runnerDecisionFor("action-call-model").decision !== "not_implemented"
+) {
+  throw new Error(
+    "Dry-run runner failed to mark MCP and model calls as not implemented."
+  );
+}
+
+if (runnerDryRun.blockedActionCount < 5) {
+  throw new Error("Dry-run runner under-reported blocked actions.");
+}
+
 const requireFromDevCheck = createRequire(import.meta.url);
 const tsxCliPath = requireFromDevCheck.resolve("tsx/cli");
 const rootHelp = execFileSync(
@@ -199,6 +319,14 @@ const replayHelp = execFileSync(
     stdio: ["ignore", "pipe", "pipe"]
   }
 );
+const runnerHelp = execFileSync(
+  process.execPath,
+  [tsxCliPath, "scripts/failsafe.ts", "runner", "--help"],
+  {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  }
+);
 
 if (!rootHelp.includes("FailSafe mock CLI")) {
   throw new Error("FailSafe CLI root help did not render expected text.");
@@ -208,6 +336,10 @@ if (!replayHelp.includes("FailSafe mock replay")) {
   throw new Error("FailSafe CLI replay help did not render expected text.");
 }
 
+if (!runnerHelp.includes("FailSafe dry-run runner preview")) {
+  throw new Error("FailSafe CLI runner help did not render expected text.");
+}
+
 console.log(
-  `FailSafe dev check passed: ${parsedPacks.length} packs, ${parsedRuns.length} seeded run, ${engineRuns.length} deterministic engine runs, replay schema ok, comparison schema ok, CLI help ok, safety guardrails ok.`
+  `FailSafe dev check passed: ${parsedPacks.length} packs, ${parsedRuns.length} seeded run, ${engineRuns.length} deterministic engine runs, replay schema ok, comparison schema ok, runner dry-run policy ok, CLI help ok, safety guardrails ok.`
 );

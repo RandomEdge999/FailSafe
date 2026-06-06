@@ -16,6 +16,20 @@ FailSafe scenarios must not target live external systems without explicit author
 
 Demo mode must not perform destructive file, shell, email, network, database, or account actions. High-risk actions must remain mocked or blocked.
 
+## Dry-Run Runner Contract
+
+Phase 3A dry-run runner output is a policy preview only. It must always report `executed: false` and `dryRunOnly: true`.
+
+Current dry-run policy:
+
+- Synthetic low-risk file-read intent may be modeled without reading local files.
+- Non-synthetic file-read intent requires explicit approval before any future execution path.
+- File writes, shell commands, network requests, email sends, and database queries are blocked.
+- MCP tool calls and model calls are not implemented.
+- Dry-run policy decisions are not runtime isolation proof.
+
+Do not convert dry-run preview decisions into real execution unless an explicitly reviewed sandbox runner, authorization model, and approval gate exist.
+
 ## Synthetic Examples Only
 
 Starter scenario packs must use synthetic examples:

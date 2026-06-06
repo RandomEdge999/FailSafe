@@ -21,7 +21,7 @@ FailSafe is built for the Microsoft Agents League Hackathon, Creative Apps categ
 1. Import or select an agent project.
 2. Detect tools, MCP servers, prompts, trust boundaries, and high-risk actions.
 3. Choose a crash-test scenario pack.
-4. Run the agent in a controlled sandbox.
+4. Run a synthetic mock crash test or preview future runner policy decisions.
 5. Watch the failure timeline.
 6. Review the risk score and root-cause findings.
 7. Generate a bounded mitigation plan.
@@ -31,18 +31,18 @@ FailSafe is built for the Microsoft Agents League Hackathon, Creative Apps categ
 
 ## Current MVP Scope
 
-The current Phase 2.5 slice includes a runnable API-backed mock studio, mock orchestrator API, shared Zod schemas, starter defensive scenario packs, a deterministic mock scenario engine, a scoring heuristic, example vulnerable-agent inputs, in-memory mock run lifecycle state, in-memory regression artifacts, safe mock replay API support, a local mock replay CLI, baseline-vs-replay comparison schemas and endpoint, a Studio comparison panel, docs, Copilot instructions, prompt files, and custom agent instruction files.
+The current Phase 3A slice includes a runnable API-backed mock studio, mock orchestrator API, shared Zod schemas, starter defensive scenario packs, a deterministic mock scenario engine, a scoring heuristic, example vulnerable-agent inputs, in-memory mock run lifecycle state, in-memory regression artifacts, safe mock replay API support, a local mock replay CLI, baseline-vs-replay comparison schemas and endpoint, a reviewed dry-run runner contract, a deny-by-default runner policy preview endpoint, a CLI runner preview command, a Studio runner readiness panel, docs, Copilot instructions, prompt files, and custom agent instruction files.
 
-It does not include real sandbox execution, live LLM calls, real MCP introspection or execution, PostgreSQL persistence, queues, authentication, deployment infrastructure, or destructive tool execution.
+It does not include real sandbox execution, runtime isolation, live LLM calls, real MCP introspection or execution, PostgreSQL persistence, queues, authentication, deployment infrastructure, or destructive tool execution. Dry-run runner decisions are policy previews only; they are not proof that untrusted code was isolated.
 
 ## Architecture Overview
 
 ```txt
 apps/studio-web          Next.js dashboard and mock crash-lab UI
-apps/orchestrator-api    Fastify mock API for projects, scenarios, runs, findings, regressions, and replay comparison
+apps/orchestrator-api    Fastify mock API for projects, scenarios, runs, findings, regressions, replay comparison, and runner policy preview
 packages/schemas         Shared Zod schemas and TypeScript types
 packages/attack-packs    Typed starter defensive scenario packs
-packages/scenario-engine Deterministic synthetic run, finding, trace, replay, and comparison helpers
+packages/scenario-engine Deterministic synthetic run, finding, trace, replay, comparison, and dry-run policy helpers
 packages/scoring-engine  Initial crash-score heuristic
 packages/trace-model     Trace and timeline helpers
 examples/vulnerable-agent Synthetic local target for demos
@@ -94,9 +94,11 @@ Run the safe local mock CLI:
 pnpm failsafe --help
 pnpm failsafe regressions
 pnpm failsafe replay <regression-id>
+pnpm failsafe runner --help
+pnpm failsafe runner preview
 ```
 
-The CLI defaults to `http://localhost:4000`. Set `FAILSAFE_API_BASE_URL` to point it at another running FailSafe mock API. CLI replay requires the API process that created the in-memory regression artifact; artifacts are not persisted across API restarts.
+The CLI defaults to `http://localhost:4000`. Set `FAILSAFE_API_BASE_URL` to point it at another running FailSafe mock API. CLI replay requires the API process that created the in-memory regression artifact; artifacts are not persisted across API restarts. `pnpm failsafe runner preview` calls the dry-run policy preview endpoint with synthetic intended actions and prints decisions; it does not execute those actions.
 
 Default local URLs:
 
@@ -125,6 +127,7 @@ Implemented mock API endpoints:
 - `GET /regressions/:id`
 - `POST /regressions/mock`
 - `POST /regressions/:id/replay-mock`
+- `POST /runner/dry-run`
 
 `POST /runs/mock` accepts:
 
@@ -150,9 +153,11 @@ POST /regressions/regression-tool-poisoning-pack-tool-poisoning-guardrail-a1b2c3
 
 `pnpm failsafe replay <regression-id>` calls the running mock API, polls the replay run until it leaves `queued` or `running`, then prints the replay run ID, status, baseline run ID, scenario pack ID, score, finding count, trace event count, and a mock-only safety statement. `pnpm failsafe regressions` lists in-memory artifacts so demo users can discover the exact regression ID to replay.
 
+`POST /runner/dry-run` accepts a project ID, scenario pack ID, and a typed list of intended runner actions. It returns `executed: false`, `dryRunOnly: true`, per-action policy decisions, trace-like evidence, blocked action counts, approval requirements, not-implemented counts, and safety notes. The endpoint validates input but does not inspect arbitrary local files, run shell commands, make network calls, call MCP servers, call LLMs, send email, or touch databases. File writes, shell commands, network requests, email sends, and database queries are blocked. MCP tool calls and model calls are marked not implemented. Synthetic low-risk file-read intent can be modeled as policy-preview allowed without reading a file.
+
 ## Demo Narrative
 
-Open the studio and show the FailSafe dashboard. The page loads the demo project, starter scenario packs, seeded run, findings, score, trace, and saved regressions from the API. Select a starter pack, click Run Crash Test, and watch the run move through queued and running states before it reaches needs_review. Click timeline events to inspect raw evidence, click finding cards to inspect root cause and mitigations, open Fix with Copilot to preview the bounded prompt payload, then Save Regression to create an in-memory mock regression artifact. Click Replay Mock on a saved artifact to rerun the same deterministic synthetic scenario through the safe mock replay endpoint. After replay completes, show the Baseline vs Replay panel and explain that it compares synthetic mock evidence only. Optionally run `pnpm failsafe regressions` and `pnpm failsafe replay <regression-id>` while the API is running to show the same replay path from the local CLI.
+Open the studio and show the FailSafe dashboard. The page loads the demo project, starter scenario packs, seeded run, findings, score, trace, and saved regressions from the API. Select a starter pack, click Run Crash Test, and watch the run move through queued and running states before it reaches needs_review. Click timeline events to inspect raw evidence, click finding cards to inspect root cause and mitigations, open Fix with Copilot to preview the bounded prompt payload, then Save Regression to create an in-memory mock regression artifact. Click Replay Mock on a saved artifact to rerun the same deterministic synthetic scenario through the safe mock replay endpoint. After replay completes, show the Baseline vs Replay panel and explain that it compares synthetic mock evidence only. Show the Runner Readiness panel and point out that Phase 3A can model deny-by-default policy decisions but cannot execute untrusted code. Optionally run `pnpm failsafe regressions`, `pnpm failsafe replay <regression-id>`, and `pnpm failsafe runner preview` while the API is running to show the same mock replay and dry-run policy preview paths from the local CLI.
 
 ## Safety Disclaimer
 
@@ -166,6 +171,7 @@ The current score is an initial product heuristic for demos and prioritization. 
 - Phase 1: API-backed mock studio vertical slice with run lifecycle, evidence inspection, Copilot prompt preview, and regression artifacts.
 - Phase 2: deterministic mock scenario engine and safe mock regression replay API.
 - Phase 2.5: safe mock replay CLI plus baseline-vs-replay comparison endpoint and Studio panel.
-- Phase 3: sandbox runner with strict isolation and dry-run defaults.
+- Phase 3A: reviewed dry-run runner contract, deny-by-default policy preview endpoint, CLI preview, and Studio readiness panel.
+- Phase 3B: reviewed sandbox runner with strict isolation and dry-run defaults.
 - Phase 4: Patch Coach with Copilot prompts, mitigation plans, and regression generation.
 - Phase 5: hackathon demo polish, architecture diagram, video script, and public repo cleanup.

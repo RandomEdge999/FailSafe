@@ -6,6 +6,7 @@ import { registerFindingRoutes } from "./routes/findings";
 import { registerHealthRoutes } from "./routes/health";
 import { registerProjectRoutes } from "./routes/projects";
 import { registerRegressionRoutes } from "./routes/regressions";
+import { registerRunnerRoutes } from "./routes/runner";
 import { registerRunRoutes } from "./routes/runs";
 import { registerScenarioRoutes } from "./routes/scenarios";
 
@@ -24,6 +25,7 @@ export async function buildServer() {
   await registerProjectRoutes(app);
   await registerScenarioRoutes(app);
   await registerRunRoutes(app);
+  await registerRunnerRoutes(app);
   await registerFindingRoutes(app);
   await registerRegressionRoutes(app);
 

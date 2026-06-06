@@ -20,6 +20,7 @@ import { FindingDetailPanel } from "./FindingDetailPanel";
 import { RegressionPanel } from "./RegressionPanel";
 import { ReplayComparisonPanel } from "./ReplayComparisonPanel";
 import { RiskInspector } from "./RiskInspector";
+import { RunnerReadinessPanel } from "./RunnerReadinessPanel";
 import { SafetyScoreCard } from "./SafetyScoreCard";
 import { ScenarioLibrary } from "./ScenarioLibrary";
 import {
@@ -495,6 +496,7 @@ export function AppShell() {
             selectedPack={activePack}
             run={currentRun}
           />
+          <RunnerReadinessPanel />
           <RegressionPanel
             regressions={regressions}
             lastSavedRegressionId={lastSavedRegressionId}
