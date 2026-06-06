@@ -4,6 +4,7 @@ import {
   FindingSchema,
   ProjectSchema,
   RegressionArtifactSchema,
+  ReplayComparisonSchema,
   ScenarioPackSchema,
   ScenarioRunSchema,
   type CreateMockRegressionInput,
@@ -11,6 +12,7 @@ import {
   type Finding,
   type Project,
   type RegressionArtifact,
+  type ReplayComparison,
   type ScenarioPack,
   type ScenarioRun
 } from "@failsafe/schemas";
@@ -124,6 +126,12 @@ export function listRuns(): Promise<ScenarioRun[]> {
 
 export function getRun(id: string): Promise<ScenarioRun> {
   return requestJson(`/runs/${id}`, (value) => ScenarioRunSchema.parse(value));
+}
+
+export function getRunComparison(id: string): Promise<ReplayComparison> {
+  return requestJson(`/runs/${id}/comparison`, (value) =>
+    ReplayComparisonSchema.parse(value)
+  );
 }
 
 export function createMockRun(input: CreateMockRunInput): Promise<ScenarioRun> {

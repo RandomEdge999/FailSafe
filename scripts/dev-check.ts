@@ -1,6 +1,7 @@
 import { starterAttackPacks } from "@failsafe/attack-packs";
 import {
   MOCK_SCENARIO_VERSION,
+  compareMockReplayRuns,
   deriveMockScenarioSeed,
   executeMockScenario,
   findMockScenarioSafetyIssues
@@ -8,9 +9,12 @@ import {
 import { calculateCrashScore } from "@failsafe/scoring-engine";
 import {
   RegressionArtifactSchema,
+  ReplayComparisonSchema,
   ScenarioPackSchema,
   ScenarioRunSchema
 } from "@failsafe/schemas";
+import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
 import { mockProjects } from "../apps/orchestrator-api/src/data/mock-projects";
 import { mockRuns } from "../apps/orchestrator-api/src/data/mock-runs";
 
@@ -117,6 +121,9 @@ const replayExecution = executeMockScenario({
 });
 const replayRun = ScenarioRunSchema.parse(replayExecution.run);
 const replaySafetyIssues = findMockScenarioSafetyIssues(replayRun);
+const comparisonBaselineRun = engineRuns.find(
+  (run) => run.scenarioPackId === scenarioPack.id
+);
 
 if (replayRun.baselineRunId !== regression.runId) {
   throw new Error("Mock replay run did not preserve the baseline run link.");
@@ -128,6 +135,79 @@ if (replaySafetyIssues.length > 0) {
   );
 }
 
+if (!comparisonBaselineRun) {
+  throw new Error("Expected deterministic engine baseline for comparison check.");
+}
+
+const comparisonReplayExecution = executeMockScenario({
+  project,
+  agentTarget,
+  scenarioPack,
+  runId: "run-dev-check-comparison-replay",
+  seed: deriveMockScenarioSeed({
+    projectId: comparisonBaselineRun.projectId,
+    agentTargetId: comparisonBaselineRun.agentTargetId,
+    scenarioPackId: comparisonBaselineRun.scenarioPackId,
+    runId: comparisonBaselineRun.id
+  }),
+  startedAt: "2026-06-05T07:20:00.000Z",
+  baselineRunId: comparisonBaselineRun.id
+});
+const comparisonReplayRun = ScenarioRunSchema.parse(
+  comparisonReplayExecution.run
+);
+const replayComparison = ReplayComparisonSchema.parse(
+  compareMockReplayRuns({
+    baselineRun: comparisonBaselineRun,
+    replayRun: comparisonReplayRun,
+    expectedFindingCategories: regression.expectedFindingCategories,
+    expectedTraceEventTypes: comparisonBaselineRun.trace.map((event) => event.type)
+  })
+);
+
+if (!replayComparison.mockOnly) {
+  throw new Error("Replay comparison did not preserve the mock-only flag.");
+}
+
+if (!replayComparison.expectedFindingCategoriesPreserved) {
+  throw new Error("Replay comparison did not preserve expected findings.");
+}
+
+if (replayComparison.missingExpectedTraceEventTypes.length > 0) {
+  throw new Error(
+    `Replay comparison missed expected trace event types: ${replayComparison.missingExpectedTraceEventTypes.join(
+      ", "
+    )}`
+  );
+}
+
+const requireFromDevCheck = createRequire(import.meta.url);
+const tsxCliPath = requireFromDevCheck.resolve("tsx/cli");
+const rootHelp = execFileSync(
+  process.execPath,
+  [tsxCliPath, "scripts/failsafe.ts", "--help"],
+  {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  }
+);
+const replayHelp = execFileSync(
+  process.execPath,
+  [tsxCliPath, "scripts/failsafe.ts", "replay", "--help"],
+  {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  }
+);
+
+if (!rootHelp.includes("FailSafe mock CLI")) {
+  throw new Error("FailSafe CLI root help did not render expected text.");
+}
+
+if (!replayHelp.includes("FailSafe mock replay")) {
+  throw new Error("FailSafe CLI replay help did not render expected text.");
+}
+
 console.log(
-  `FailSafe dev check passed: ${parsedPacks.length} packs, ${parsedRuns.length} seeded run, ${engineRuns.length} deterministic engine runs, replay schema ok, safety guardrails ok.`
+  `FailSafe dev check passed: ${parsedPacks.length} packs, ${parsedRuns.length} seeded run, ${engineRuns.length} deterministic engine runs, replay schema ok, comparison schema ok, CLI help ok, safety guardrails ok.`
 );

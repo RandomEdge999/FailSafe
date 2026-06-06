@@ -2,7 +2,7 @@
 
 Crash-test AI agents before production does.
 
-FailSafe is a visual crash-test studio for AI agents and MCP toolchains. It helps developers import an agent project, map tools and trust boundaries, run defensive synthetic scenarios, visualize the failure timeline, score the risk, generate mitigation guidance, and rerun the same mock scenario as a regression case.
+FailSafe is a visual crash-test studio for AI agents and MCP toolchains. It helps developers import an agent project, map tools and trust boundaries, run defensive synthetic scenarios, visualize the failure timeline, score the risk, generate mitigation guidance, rerun the same mock scenario as a regression case, and compare a baseline run against a deterministic mock replay.
 
 ## Problem Statement
 
@@ -31,7 +31,7 @@ FailSafe is built for the Microsoft Agents League Hackathon, Creative Apps categ
 
 ## Current MVP Scope
 
-The current Phase 2 slice includes a runnable API-backed mock studio, mock orchestrator API, shared Zod schemas, starter defensive scenario packs, a deterministic mock scenario engine, a scoring heuristic, example vulnerable-agent inputs, in-memory mock run lifecycle state, in-memory regression artifacts, safe mock replay API support, docs, Copilot instructions, prompt files, and custom agent instruction files.
+The current Phase 2.5 slice includes a runnable API-backed mock studio, mock orchestrator API, shared Zod schemas, starter defensive scenario packs, a deterministic mock scenario engine, a scoring heuristic, example vulnerable-agent inputs, in-memory mock run lifecycle state, in-memory regression artifacts, safe mock replay API support, a local mock replay CLI, baseline-vs-replay comparison schemas and endpoint, a Studio comparison panel, docs, Copilot instructions, prompt files, and custom agent instruction files.
 
 It does not include real sandbox execution, live LLM calls, real MCP introspection or execution, PostgreSQL persistence, queues, authentication, deployment infrastructure, or destructive tool execution.
 
@@ -39,10 +39,10 @@ It does not include real sandbox execution, live LLM calls, real MCP introspecti
 
 ```txt
 apps/studio-web          Next.js dashboard and mock crash-lab UI
-apps/orchestrator-api    Fastify mock API for projects, scenarios, runs, findings, and regressions
+apps/orchestrator-api    Fastify mock API for projects, scenarios, runs, findings, regressions, and replay comparison
 packages/schemas         Shared Zod schemas and TypeScript types
 packages/attack-packs    Typed starter defensive scenario packs
-packages/scenario-engine Deterministic synthetic run, finding, trace, and replay generation
+packages/scenario-engine Deterministic synthetic run, finding, trace, replay, and comparison helpers
 packages/scoring-engine  Initial crash-score heuristic
 packages/trace-model     Trace and timeline helpers
 examples/vulnerable-agent Synthetic local target for demos
@@ -88,6 +88,16 @@ pnpm check
 pnpm build
 ```
 
+Run the safe local mock CLI:
+
+```bash
+pnpm failsafe --help
+pnpm failsafe regressions
+pnpm failsafe replay <regression-id>
+```
+
+The CLI defaults to `http://localhost:4000`. Set `FAILSAFE_API_BASE_URL` to point it at another running FailSafe mock API. CLI replay requires the API process that created the in-memory regression artifact; artifacts are not persisted across API restarts.
+
 Default local URLs:
 
 - Studio: http://localhost:3000
@@ -107,6 +117,7 @@ Implemented mock API endpoints:
 - `GET /scenarios/:id`
 - `GET /runs`
 - `GET /runs/:id`
+- `GET /runs/:id/comparison`
 - `POST /runs/mock`
 - `GET /findings`
 - `GET /findings/:id`
@@ -135,11 +146,13 @@ POST /regressions/regression-tool-poisoning-pack-tool-poisoning-guardrail-a1b2c3
 
 `POST /regressions/:id/replay-mock` looks up the in-memory artifact, verifies it is marked mock replayable, reruns the deterministic synthetic scenario with the saved seed, stores a new in-memory replay run, and returns a typed `ScenarioRun`. It does not execute real tools, files, shell commands, network calls, LLM calls, MCP calls, Copilot calls, email, or database actions.
 
-The `pnpm failsafe replay ...` CLI is not implemented yet. Mock replay currently runs through the API and optional Studio button only.
+`GET /runs/:id/comparison` accepts a replay run ID, follows its `baselineRunId`, and returns a typed baseline-vs-replay summary. The comparison includes status, score, finding count, trace event count, matching trace event types, missing expected trace event types, new trace event types, and a `mockOnly: true` flag. It compares two synthetic mock runs only; it does not prove that a real mitigation worked.
+
+`pnpm failsafe replay <regression-id>` calls the running mock API, polls the replay run until it leaves `queued` or `running`, then prints the replay run ID, status, baseline run ID, scenario pack ID, score, finding count, trace event count, and a mock-only safety statement. `pnpm failsafe regressions` lists in-memory artifacts so demo users can discover the exact regression ID to replay.
 
 ## Demo Narrative
 
-Open the studio and show the FailSafe dashboard. The page loads the demo project, starter scenario packs, seeded run, findings, score, trace, and saved regressions from the API. Select a starter pack, click Run Crash Test, and watch the run move through queued and running states before it reaches needs_review. Click timeline events to inspect raw evidence, click finding cards to inspect root cause and mitigations, open Fix with Copilot to preview the bounded prompt payload, then Save Regression to create an in-memory mock regression artifact. Click Replay Mock on a saved artifact to rerun the same deterministic synthetic scenario through the safe mock replay endpoint.
+Open the studio and show the FailSafe dashboard. The page loads the demo project, starter scenario packs, seeded run, findings, score, trace, and saved regressions from the API. Select a starter pack, click Run Crash Test, and watch the run move through queued and running states before it reaches needs_review. Click timeline events to inspect raw evidence, click finding cards to inspect root cause and mitigations, open Fix with Copilot to preview the bounded prompt payload, then Save Regression to create an in-memory mock regression artifact. Click Replay Mock on a saved artifact to rerun the same deterministic synthetic scenario through the safe mock replay endpoint. After replay completes, show the Baseline vs Replay panel and explain that it compares synthetic mock evidence only. Optionally run `pnpm failsafe regressions` and `pnpm failsafe replay <regression-id>` while the API is running to show the same replay path from the local CLI.
 
 ## Safety Disclaimer
 
@@ -152,6 +165,7 @@ The current score is an initial product heuristic for demos and prioritization. 
 - Phase 0: repository foundation, docs, schemas, mock UI, mock API.
 - Phase 1: API-backed mock studio vertical slice with run lifecycle, evidence inspection, Copilot prompt preview, and regression artifacts.
 - Phase 2: deterministic mock scenario engine and safe mock regression replay API.
+- Phase 2.5: safe mock replay CLI plus baseline-vs-replay comparison endpoint and Studio panel.
 - Phase 3: sandbox runner with strict isolation and dry-run defaults.
 - Phase 4: Patch Coach with Copilot prompts, mitigation plans, and regression generation.
 - Phase 5: hackathon demo polish, architecture diagram, video script, and public repo cleanup.

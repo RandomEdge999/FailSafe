@@ -11,6 +11,9 @@ importers:
       '@failsafe/scenario-engine':
         specifier: workspace:*
         version: link:packages/scenario-engine
+      '@failsafe/schemas':
+        specifier: workspace:*
+        version: link:packages/schemas
       '@types/node':
         specifier: ^22.10.5
         version: 22.19.19

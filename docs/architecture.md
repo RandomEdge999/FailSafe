@@ -2,15 +2,17 @@
 
 ## System Architecture
 
-FailSafe is a TypeScript-first monorepo. The Phase 2 slice uses a Next.js studio, Fastify orchestrator API, shared Zod schemas, typed scenario packs, a deterministic mock scenario engine, scoring helpers, trace helpers, and synthetic demo data. The studio loads its project, scenario, run, finding, trace, score, regression, and mock replay state from the API.
+FailSafe is a TypeScript-first monorepo. The Phase 2.5 slice uses a Next.js studio, Fastify orchestrator API, shared Zod schemas, typed scenario packs, a deterministic mock scenario engine, replay comparison helpers, scoring helpers, trace helpers, a safe local CLI, and synthetic demo data. The studio loads its project, scenario, run, finding, trace, score, regression, mock replay, and baseline comparison state from the API.
 
 ```mermaid
 flowchart LR
   User["Developer / Demo User"] --> Studio["studio-web<br/>Next.js UI"]
+  User --> CLI["pnpm failsafe<br/>safe local CLI"]
   Studio --> API["orchestrator-api<br/>Fastify mock API"]
+  CLI --> API
   API --> Schemas["schemas<br/>Zod contracts"]
   API --> Packs["attack-packs<br/>defensive packs"]
-  API --> ScenarioEngine["scenario-engine<br/>deterministic mock execution"]
+  API --> ScenarioEngine["scenario-engine<br/>deterministic mock execution<br/>and replay comparison"]
   API --> Scoring["scoring-engine<br/>heuristic score"]
   API --> Trace["trace-model<br/>timeline helpers"]
   API --> MockData["in-memory mock data<br/>projects, runs, findings, regressions"]
@@ -25,15 +27,15 @@ flowchart LR
 
 ### `apps/studio-web`
 
-Renders the FailSafe Studio dashboard. The current implementation uses a typed API client pointed at `NEXT_PUBLIC_API_BASE_URL` or `http://localhost:4000`. It handles loading, API unavailable, queued, running, completed, no-finding, Copilot preview, and saved-regression states.
+Renders the FailSafe Studio dashboard. The current implementation uses a typed API client pointed at `NEXT_PUBLIC_API_BASE_URL` or `http://localhost:4000`. It handles loading, API unavailable, queued, running, completed, no-finding, Copilot preview, saved-regression, replay, and baseline-vs-replay comparison states.
 
 ### `apps/orchestrator-api`
 
-Owns HTTP routes for health, projects, scenarios, runs, findings, and regressions. The current API returns mock data and stores created mock runs, replay runs, and regression artifacts in memory for the server process. It owns lifecycle materialization from `queued` to `running` to `needs_review`, while scenario-specific trace, finding, and score generation lives in `packages/scenario-engine`. Future work should add persistence, real run orchestration, sandbox dispatch, trace collection from a runner, and reviewed sandbox replay execution.
+Owns HTTP routes for health, projects, scenarios, runs, findings, regressions, and replay comparison. The current API returns mock data and stores created mock runs, replay runs, and regression artifacts in memory for the server process. It owns lifecycle materialization from `queued` to `running` to `needs_review`, while scenario-specific trace, finding, score generation, and comparison helpers live in `packages/scenario-engine`. Future work should add persistence, real run orchestration, sandbox dispatch, trace collection from a runner, and reviewed sandbox replay execution.
 
 ### `packages/schemas`
 
-Defines Zod schemas and TypeScript types for all core entities. This package is the source of truth for data shape across apps and packages.
+Defines Zod schemas and TypeScript types for all core entities, including the `ReplayComparison` contract used by the API and Studio. This package is the source of truth for data shape across apps and packages.
 
 ### `packages/attack-packs`
 
@@ -41,7 +43,11 @@ Defines typed defensive scenario packs. Packs must use synthetic examples and av
 
 ### `packages/scenario-engine`
 
-Produces deterministic mock scenario executions. Given a project, agent target, scenario pack, run ID, seed, and start time, it builds a typed synthetic plan, emits trace events, creates scenario-specific findings, calculates scenario-specific score inputs, and returns a validated `ScenarioRun`. The same seed and scenario context produce stable event and finding ID suffixes. The engine does not call real tools, files, shell commands, network, LLMs, MCP servers, Copilot, email, or databases.
+Produces deterministic mock scenario executions. Given a project, agent target, scenario pack, run ID, seed, and start time, it builds a typed synthetic plan, emits trace events, creates scenario-specific findings, calculates scenario-specific score inputs, and returns a validated `ScenarioRun`. The package also compares a baseline run with a replay run and returns a validated `ReplayComparison`. The same seed and scenario context produce stable event and finding ID suffixes. The engine does not call real tools, files, shell commands, network, LLMs, MCP servers, Copilot, email, or databases.
+
+### `scripts/failsafe.ts`
+
+Provides the safe local CLI entrypoint exposed as `pnpm failsafe`. It calls the running mock API for regression listing and mock replay, polls replay runs with a bounded timeout, and prints a concise summary. It does not read or write regression files, execute scenario tools, run shell commands, call live LLMs, call MCP servers, invoke Copilot, or contact external systems.
 
 ### `packages/scoring-engine`
 
@@ -63,6 +69,8 @@ Provides trace-event parsing and timeline grouping helpers. Future work can add 
 8. User selects a finding to inspect root cause, mitigations, and a Copilot prompt preview.
 9. User saves a regression through `POST /regressions/mock`; the API creates an in-memory artifact with finding IDs, trace event IDs, expected safe behavior, deterministic seed, agent target ID, source run status, scenario version, expected finding categories, expected trace event types, and a mock replay endpoint.
 10. User replays a saved artifact through `POST /regressions/:id/replay-mock`; the API verifies the artifact is mock replayable, calls the deterministic scenario engine with the saved seed, stores a new in-memory replay run with `baselineRunId`, and returns the replayed `ScenarioRun`.
+11. Studio or CLI polls `GET /runs/:id` until the replay leaves `queued` or `running`.
+12. Studio calls `GET /runs/:id/comparison` for the replay run. The API follows `baselineRunId`, compares the materialized baseline and replay runs, and returns a typed `ReplayComparison`.
 
 ## Trace Flow
 
@@ -106,7 +114,15 @@ Phase 2 extends the shared `RegressionArtifact` schema with:
 - `expectedTraceEventTypes`
 - `traceEventIds`
 
-Regression artifacts are currently in-memory mock records only. They do not write files, update a database, or execute shell replay commands. Phase 2 replay is API-only: `POST /regressions/:id/replay-mock` reruns the deterministic synthetic scenario in memory and never invokes real tools or external systems.
+Regression artifacts are currently in-memory mock records only. They do not write files, update a database, or execute shell replay commands. Phase 2.5 replay can be triggered from the Studio or the safe local CLI, but both paths call the same mock API. `POST /regressions/:id/replay-mock` reruns the deterministic synthetic scenario in memory and never invokes real tools or external systems. `GET /runs/:id/comparison` compares synthetic mock runs only and must not be described as real mitigation proof.
+
+## Mock CLI Flow
+
+`pnpm failsafe regressions` calls `GET /regressions` and prints in-memory artifact IDs, names, scenario pack IDs, replayable status, and created time.
+
+`pnpm failsafe replay <regression-id>` calls `POST /regressions/:id/replay-mock`, polls `GET /runs/:id`, and prints replay run ID, status, baseline run ID, scenario pack ID, score, finding count, trace event count, and a mock-only safety statement.
+
+The CLI defaults to `http://localhost:4000` and supports `FAILSAFE_API_BASE_URL`. It requires a running API process and cannot replay artifacts from a previous process because persistence is intentionally not implemented.
 
 ## Future Sandbox Runner Design
 

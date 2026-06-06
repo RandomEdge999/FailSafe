@@ -1,5 +1,6 @@
 import {
   MOCK_SCENARIO_VERSION,
+  compareMockReplayRuns,
   deriveMockScenarioSeed,
   executeMockScenario
 } from "@failsafe/scenario-engine";
@@ -7,6 +8,7 @@ import {
   ScenarioRunSchema,
   type CreateMockRunInput,
   type RegressionArtifact,
+  type ReplayComparison,
   type ScenarioRun
 } from "@failsafe/schemas";
 import { randomUUID } from "node:crypto";
@@ -138,6 +140,34 @@ export function getRunById(id: string) {
   const record = storedRuns.get(id);
 
   return record ? materializeRun(record) : undefined;
+}
+
+export function getRunComparison(id: string): ReplayComparison {
+  const replayRun = getRunById(id);
+
+  if (!replayRun) {
+    throw requestError(`Run ${id} was not found.`, "run_not_found", 404);
+  }
+
+  if (!replayRun.baselineRunId) {
+    throw requestError(
+      `Run ${id} is not a mock replay run with a baselineRunId.`,
+      "run_comparison_unavailable",
+      409
+    );
+  }
+
+  const baselineRun = getRunById(replayRun.baselineRunId);
+
+  if (!baselineRun) {
+    throw requestError(
+      `Baseline run ${replayRun.baselineRunId} was not found in this API process.`,
+      "baseline_run_not_found",
+      404
+    );
+  }
+
+  return compareMockReplayRuns({ baselineRun, replayRun });
 }
 
 export function getRunReplayContext(id: string): RunReplayContext | undefined {

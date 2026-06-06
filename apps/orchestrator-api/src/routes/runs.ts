@@ -1,6 +1,11 @@
 import type { FastifyInstance } from "fastify";
 import { CreateMockRunInputSchema } from "@failsafe/schemas";
-import { createMockRun, getRunById, listRuns } from "../services/run-service";
+import {
+  createMockRun,
+  getRunById,
+  getRunComparison,
+  listRuns
+} from "../services/run-service";
 
 export async function registerRunRoutes(app: FastifyInstance) {
   app.get("/runs", async () => listRuns());
@@ -14,6 +19,12 @@ export async function registerRunRoutes(app: FastifyInstance) {
     }
 
     return run;
+  });
+
+  app.get("/runs/:id/comparison", async (request) => {
+    const { id } = request.params as { id: string };
+
+    return getRunComparison(id);
   });
 
   app.post("/runs/mock", async (request, reply) => {

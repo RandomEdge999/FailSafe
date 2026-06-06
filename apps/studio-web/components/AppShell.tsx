@@ -9,6 +9,7 @@ import type {
   ScenarioRun,
   TraceEvent
 } from "@failsafe/schemas";
+import type { ReplayComparison } from "@failsafe/schemas";
 import { AlertTriangle, Loader2, RefreshCcw } from "lucide-react";
 import { CopilotPromptPanel } from "./CopilotPromptPanel";
 import { CrashTimeline } from "./CrashTimeline";
@@ -17,6 +18,7 @@ import { EmptyState } from "./EmptyState";
 import { FindingCard } from "./FindingCard";
 import { FindingDetailPanel } from "./FindingDetailPanel";
 import { RegressionPanel } from "./RegressionPanel";
+import { ReplayComparisonPanel } from "./ReplayComparisonPanel";
 import { RiskInspector } from "./RiskInspector";
 import { SafetyScoreCard } from "./SafetyScoreCard";
 import { ScenarioLibrary } from "./ScenarioLibrary";
@@ -24,6 +26,7 @@ import {
   createMockRun,
   getHealth,
   getRun,
+  getRunComparison,
   listProjects,
   listRegressions,
   listRuns,
@@ -88,6 +91,10 @@ export function AppShell() {
   const [lastReplayedRegressionId, setLastReplayedRegressionId] = useState<
     string | undefined
   >();
+  const [replayComparison, setReplayComparison] =
+    useState<ReplayComparison | null>(null);
+  const [isLoadingComparison, setIsLoadingComparison] = useState(false);
+  const [comparisonError, setComparisonError] = useState<string | null>(null);
 
   const project = projects[0] ?? null;
   const selectedPack = useMemo(
@@ -114,6 +121,55 @@ export function AppShell() {
       setSelectedFindingId(run.findings[0]?.id);
     }
   }, []);
+
+  const loadReplayComparison = useCallback(async (run: ScenarioRun) => {
+    if (!run.baselineRunId) {
+      setReplayComparison(null);
+      setComparisonError(null);
+      setIsLoadingComparison(false);
+      return;
+    }
+
+    setIsLoadingComparison(true);
+    setComparisonError(null);
+
+    try {
+      setReplayComparison(await getRunComparison(run.id));
+    } catch (error) {
+      setReplayComparison(null);
+      setComparisonError(formatError(error));
+    } finally {
+      setIsLoadingComparison(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!currentRun?.baselineRunId) {
+      if (replayComparison || comparisonError || isLoadingComparison) {
+        setReplayComparison(null);
+        setComparisonError(null);
+        setIsLoadingComparison(false);
+      }
+      return;
+    }
+
+    if (
+      comparisonError ||
+      isRunInProgress(currentRun) ||
+      replayComparison?.replayRunId === currentRun.id ||
+      isLoadingComparison
+    ) {
+      return;
+    }
+
+    void loadReplayComparison(currentRun);
+  }, [
+    comparisonError,
+    currentRun,
+    isLoadingComparison,
+    loadReplayComparison,
+    replayComparison?.replayRunId
+  ]);
 
   const loadStudioData = useCallback(async () => {
     setIsLoading(true);
@@ -162,6 +218,8 @@ export function AppShell() {
 
     setActionError(null);
     setShowCopilotPanel(false);
+    setReplayComparison(null);
+    setComparisonError(null);
     setIsRunning(true);
 
     try {
@@ -229,6 +287,8 @@ export function AppShell() {
   async function handleReplayRegression(regression: RegressionArtifact) {
     setActionError(null);
     setShowCopilotPanel(false);
+    setReplayComparison(null);
+    setComparisonError(null);
     setReplayingRegressionId(regression.id);
 
     try {
@@ -442,6 +502,16 @@ export function AppShell() {
             onReplayMock={(regression) => void handleReplayRegression(regression)}
             replayingRegressionId={replayingRegressionId}
           />
+          {currentRun?.baselineRunId ||
+          replayComparison ||
+          isLoadingComparison ||
+          comparisonError ? (
+            <ReplayComparisonPanel
+              comparison={replayComparison}
+              error={comparisonError}
+              isLoading={isLoadingComparison}
+            />
+          ) : null}
         </div>
       </div>
     </main>

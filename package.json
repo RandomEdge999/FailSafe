@@ -8,6 +8,7 @@
     "dev": "concurrently -n api,web -c cyan,green \"pnpm --filter @failsafe/orchestrator-api dev\" \"pnpm --filter @failsafe/studio-web dev\"",
     "dev:api": "pnpm --filter @failsafe/orchestrator-api dev",
     "dev:web": "pnpm --filter @failsafe/studio-web dev",
+    "failsafe": "tsx scripts/failsafe.ts",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "dev:check": "tsx scripts/dev-check.ts",
@@ -15,6 +16,7 @@
   },
   "devDependencies": {
     "@failsafe/scenario-engine": "workspace:*",
+    "@failsafe/schemas": "workspace:*",
     "@types/node": "^22.10.5",
     "concurrently": "^9.1.2",
     "tsx": "^4.19.2",
