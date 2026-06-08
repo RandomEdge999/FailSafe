@@ -6,6 +6,7 @@ export * from "./project";
 export * from "./regression";
 export * from "./run";
 export * from "./runner";
+export * from "./sandbox";
 export * from "./scenario";
 export * from "./score";
 export * from "./tool";

@@ -115,17 +115,34 @@ Still deferred:
 - Patched-agent before/after comparison from a reviewed sandbox runner.
 - Persistent regression storage.
 
-## Phase 3B: Reviewed Sandbox Runner
+## Phase 3B: Reviewed Local Sandbox Replay Plan Foundation
 
-Build:
+Status: implemented in the current Phase 3B pass.
 
-- Isolated worker process.
-- Docker or gVisor-style sandbox prototype.
-- Deny-by-default file, shell, network, email, and database policies.
-- Tool invocation proxy.
-- Approval gate proxy.
-- Trace capture for model messages, tool calls, and policy decisions.
-- Local-only demo harness.
+- Added shared sandbox schemas for reviewed replay mode, plan, steps, safety boundaries, review status, blocked capabilities, not-implemented capabilities, and result shape.
+- Added `createReviewedSandboxReplayPlan` in `packages/scenario-engine`.
+- Added `POST /regressions/:id/sandbox-plan`.
+- Added `pnpm failsafe sandbox --help` and `pnpm failsafe sandbox plan <regression-id>`.
+- Added a Studio Sandbox Planning panel that generates and displays plan-only sandbox readiness from saved in-memory regressions.
+- Extended `scripts/dev-check.ts` to validate the sandbox plan schema, review-required status, non-executable steps, blocked capability set, not-implemented capability set, and CLI sandbox help.
+
+Implemented notes:
+
+- Sandbox planning is `plan_only`, `mockOnly: true`, `fixtureOnly: true`, and `reviewStatus: human_review_required`.
+- The plan endpoint looks up the in-memory regression, baseline run, project, scenario pack, and agent target; it does not read files or call external services.
+- Allowed fixture IDs are synthetic allowlist metadata for future review only.
+- Shell commands, arbitrary file reads/writes, network requests, live targets, MCP calls, model calls, email sends, database queries, destructive operations, secret access, background workers, and persistence writes remain blocked or not implemented.
+- No fixture replay endpoint, isolated worker, Docker, gVisor, background worker, live LLM call, MCP execution, file operation, shell execution, network action, email action, database action, persistence, auth, Redis, PostgreSQL, or deployment infrastructure was added.
+
+## Phase 3C: Reviewed Fixture-Only Replay
+
+Build next:
+
+- A hardcoded in-memory fixture map for reviewed synthetic fixture IDs only.
+- A narrow `POST /regressions/:id/sandbox-fixture-replay` endpoint only if it accepts no paths, URLs, commands, tool names, or live targets from the client.
+- Typed fixture replay result validation that still reports no arbitrary execution.
+- Studio and CLI affordances that clearly say fixture replay only.
+- Dev checks that fail if shell, network, MCP, model, email, database, arbitrary file, destructive, persistence, or background-worker paths are introduced.
 
 ## Phase 4: Patch Coach
 
@@ -152,8 +169,9 @@ Build:
 
 ## What Each Future Agent Should Build Next
 
-1. Sandbox agent: turn the Phase 3A contract into a reviewed local sandbox prototype with strict isolation, while keeping dry-run defaults.
-2. Persistence agent: design durable regression storage without changing the mock-only safety defaults.
-3. Patch Coach agent: connect findings to richer Copilot prompt payloads while keeping UI invocation mocked until explicitly promoted.
-4. Safety agent: harden safety policy enforcement and add tests for forbidden live targets.
-5. Demo agent: create a polished five-minute script, screenshots, and presentation outline.
+1. Fixture replay agent: turn the Phase 3B plan contract into a reviewed fixture-only replay path using hardcoded synthetic fixtures and no arbitrary execution.
+2. Sandbox agent: after fixture-only replay is proven safe, design a reviewed local sandbox prototype with strict isolation, while keeping dry-run defaults.
+3. Persistence agent: design durable regression storage without changing the mock-only safety defaults.
+4. Patch Coach agent: connect findings to richer Copilot prompt payloads while keeping UI invocation mocked until explicitly promoted.
+5. Safety agent: harden safety policy enforcement and add tests for forbidden live targets.
+6. Demo agent: create a polished five-minute script, screenshots, and presentation outline.

@@ -2,6 +2,7 @@ import { starterAttackPacks } from "@failsafe/attack-packs";
 import {
   MOCK_SCENARIO_VERSION,
   compareMockReplayRuns,
+  createReviewedSandboxReplayPlan,
   deriveMockScenarioSeed,
   dryRunRunnerCapabilityManifest,
   executeMockScenario,
@@ -15,6 +16,8 @@ import {
   RunnerActionSchema,
   RunnerCapabilityManifestSchema,
   RunnerDryRunResultSchema,
+  SandboxReplayPlanSchema,
+  SandboxReplayResultSchema,
   ScenarioPackSchema,
   ScenarioRunSchema
 } from "@failsafe/schemas";
@@ -301,6 +304,74 @@ if (runnerDryRun.blockedActionCount < 5) {
   throw new Error("Dry-run runner under-reported blocked actions.");
 }
 
+const sandboxPlan = SandboxReplayPlanSchema.parse(
+  createReviewedSandboxReplayPlan({
+    regression,
+    baselineRun: demoRun,
+    scenarioPack,
+    project,
+    agentTarget
+  })
+);
+const requiredSandboxBlocks = [
+  "shell_command",
+  "network_request",
+  "mcp_tool_call",
+  "model_call",
+  "email_send",
+  "database_query",
+  "arbitrary_file_write",
+  "destructive_operation"
+] as const;
+
+if (sandboxPlan.reviewStatus !== "human_review_required") {
+  throw new Error("Sandbox plan was not marked human_review_required.");
+}
+
+if (!sandboxPlan.requiresHumanReview) {
+  throw new Error("Sandbox plan did not preserve requiresHumanReview=true.");
+}
+
+if (sandboxPlan.mode !== "plan_only") {
+  throw new Error("Sandbox plan did not remain plan_only.");
+}
+
+if (!sandboxPlan.mockOnly || !sandboxPlan.fixtureOnly) {
+  throw new Error("Sandbox plan did not preserve mock/fixture-only flags.");
+}
+
+for (const capability of requiredSandboxBlocks) {
+  if (!sandboxPlan.blockedCapabilities.includes(capability)) {
+    throw new Error(`Sandbox plan did not block ${capability}.`);
+  }
+}
+
+if (
+  !sandboxPlan.notImplementedCapabilities.includes("real_sandbox_execution") ||
+  !sandboxPlan.notImplementedCapabilities.includes("fixture_replay_executor")
+) {
+  throw new Error(
+    "Sandbox plan did not mark real sandbox and fixture executor paths as not implemented."
+  );
+}
+
+if (sandboxPlan.steps.some((step) => step.willExecute !== false)) {
+  throw new Error("Sandbox plan contained an executable step.");
+}
+
+SandboxReplayResultSchema.parse({
+  planId: sandboxPlan.id,
+  regressionId: sandboxPlan.regressionId,
+  baselineRunId: sandboxPlan.baselineRunId,
+  mode: sandboxPlan.mode,
+  reviewStatus: sandboxPlan.reviewStatus,
+  executed: false,
+  mockOnly: true,
+  fixtureOnly: true,
+  completedAt: sandboxPlan.createdAt,
+  safetyNotes: [sandboxPlan.safetyStatement]
+});
+
 const requireFromDevCheck = createRequire(import.meta.url);
 const tsxCliPath = requireFromDevCheck.resolve("tsx/cli");
 const rootHelp = execFileSync(
@@ -327,6 +398,14 @@ const runnerHelp = execFileSync(
     stdio: ["ignore", "pipe", "pipe"]
   }
 );
+const sandboxHelp = execFileSync(
+  process.execPath,
+  [tsxCliPath, "scripts/failsafe.ts", "sandbox", "--help"],
+  {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  }
+);
 
 if (!rootHelp.includes("FailSafe mock CLI")) {
   throw new Error("FailSafe CLI root help did not render expected text.");
@@ -340,6 +419,10 @@ if (!runnerHelp.includes("FailSafe dry-run runner preview")) {
   throw new Error("FailSafe CLI runner help did not render expected text.");
 }
 
+if (!sandboxHelp.includes("FailSafe reviewed sandbox plan")) {
+  throw new Error("FailSafe CLI sandbox help did not render expected text.");
+}
+
 console.log(
-  `FailSafe dev check passed: ${parsedPacks.length} packs, ${parsedRuns.length} seeded run, ${engineRuns.length} deterministic engine runs, replay schema ok, comparison schema ok, runner dry-run policy ok, CLI help ok, safety guardrails ok.`
+  `FailSafe dev check passed: ${parsedPacks.length} packs, ${parsedRuns.length} seeded run, ${engineRuns.length} deterministic engine runs, replay schema ok, comparison schema ok, runner dry-run policy ok, sandbox plan ok, CLI help ok, safety guardrails ok.`
 );

@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { CreateMockRegressionInputSchema } from "@failsafe/schemas";
 import {
   createMockRegression,
+  createSandboxPlanForRegression,
   getRegressionById,
   listRegressions,
   replayMockRegression
@@ -38,5 +39,11 @@ export async function registerRegressionRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string };
 
     return reply.code(201).send(replayMockRegression(id));
+  });
+
+  app.post("/regressions/:id/sandbox-plan", async (request) => {
+    const { id } = request.params as { id: string };
+
+    return createSandboxPlanForRegression(id);
   });
 }

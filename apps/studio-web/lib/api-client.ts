@@ -5,6 +5,7 @@ import {
   ProjectSchema,
   RegressionArtifactSchema,
   ReplayComparisonSchema,
+  SandboxReplayPlanSchema,
   ScenarioPackSchema,
   ScenarioRunSchema,
   type CreateMockRegressionInput,
@@ -13,6 +14,7 @@ import {
   type Project,
   type RegressionArtifact,
   type ReplayComparison,
+  type SandboxReplayPlan,
   type ScenarioPack,
   type ScenarioRun
 } from "@failsafe/schemas";
@@ -186,6 +188,17 @@ export function replayMockRegression(id: string): Promise<ScenarioRun> {
   return requestJson(
     `/regressions/${id}/replay-mock`,
     (value) => ScenarioRunSchema.parse(value),
+    {
+      body: "{}",
+      method: "POST"
+    }
+  );
+}
+
+export function createSandboxPlan(id: string): Promise<SandboxReplayPlan> {
+  return requestJson(
+    `/regressions/${id}/sandbox-plan`,
+    (value) => SandboxReplayPlanSchema.parse(value),
     {
       body: "{}",
       method: "POST"

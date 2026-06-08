@@ -1,14 +1,17 @@
 import {
   RegressionArtifactSchema,
   type CreateMockRegressionInput,
-  type RegressionArtifact
+  type RegressionArtifact,
+  type SandboxReplayPlan
 } from "@failsafe/schemas";
+import { createReviewedSandboxReplayPlan } from "@failsafe/scenario-engine";
 import { randomUUID } from "node:crypto";
 import {
   createMockReplayRun,
   getRunById,
   getRunReplayContext
 } from "./run-service";
+import { getProjectById } from "./project-service";
 import { getScenarioById } from "./scenario-service";
 
 const regressions = new Map<string, RegressionArtifact>();
@@ -127,4 +130,68 @@ export function replayMockRegression(id: string) {
   }
 
   return createMockReplayRun(regression);
+}
+
+export function createSandboxPlanForRegression(
+  id: string
+): SandboxReplayPlan {
+  const regression = getRegressionById(id);
+
+  if (!regression) {
+    throw requestError(
+      `Regression ${id} was not found.`,
+      "regression_not_found",
+      404
+    );
+  }
+
+  const baselineRun = getRunById(regression.runId);
+
+  if (!baselineRun) {
+    throw requestError(
+      `Baseline run ${regression.runId} was not found in this API process. Regressions and runs are in-memory only; recreate the mock run and regression after restarting the API.`,
+      "baseline_run_not_found",
+      404
+    );
+  }
+
+  const project = getProjectById(regression.projectId);
+
+  if (!project) {
+    throw requestError(
+      `Project ${regression.projectId} was not found.`,
+      "project_not_found",
+      404
+    );
+  }
+
+  const scenarioPack = getScenarioById(regression.scenarioPackId);
+
+  if (!scenarioPack) {
+    throw requestError(
+      `Scenario pack ${regression.scenarioPackId} was not found.`,
+      "scenario_not_found",
+      404
+    );
+  }
+
+  const agentTarget = project.agentTargets.find(
+    (target) => target.id === regression.agentTargetId
+  );
+
+  if (!agentTarget) {
+    throw requestError(
+      `Agent target ${regression.agentTargetId} was not found.`,
+      "agent_target_not_found",
+      404
+    );
+  }
+
+  return createReviewedSandboxReplayPlan({
+    regression,
+    baselineRun,
+    scenarioPack,
+    project,
+    agentTarget
+  });
 }

@@ -5,6 +5,7 @@ import type {
   Finding,
   Project,
   RegressionArtifact,
+  SandboxReplayPlan,
   ScenarioPack,
   ScenarioRun,
   TraceEvent
@@ -22,8 +23,10 @@ import { ReplayComparisonPanel } from "./ReplayComparisonPanel";
 import { RiskInspector } from "./RiskInspector";
 import { RunnerReadinessPanel } from "./RunnerReadinessPanel";
 import { SafetyScoreCard } from "./SafetyScoreCard";
+import { SandboxPlanPanel } from "./SandboxPlanPanel";
 import { ScenarioLibrary } from "./ScenarioLibrary";
 import {
+  createSandboxPlan,
   createMockRun,
   getHealth,
   getRun,
@@ -96,6 +99,13 @@ export function AppShell() {
     useState<ReplayComparison | null>(null);
   const [isLoadingComparison, setIsLoadingComparison] = useState(false);
   const [comparisonError, setComparisonError] = useState<string | null>(null);
+  const [sandboxPlan, setSandboxPlan] = useState<SandboxReplayPlan | null>(
+    null
+  );
+  const [planningRegressionId, setPlanningRegressionId] = useState<
+    string | undefined
+  >();
+  const [sandboxPlanError, setSandboxPlanError] = useState<string | null>(null);
 
   const project = projects[0] ?? null;
   const selectedPack = useMemo(
@@ -221,6 +231,8 @@ export function AppShell() {
     setShowCopilotPanel(false);
     setReplayComparison(null);
     setComparisonError(null);
+    setSandboxPlan(null);
+    setSandboxPlanError(null);
     setIsRunning(true);
 
     try {
@@ -290,6 +302,8 @@ export function AppShell() {
     setShowCopilotPanel(false);
     setReplayComparison(null);
     setComparisonError(null);
+    setSandboxPlan(null);
+    setSandboxPlanError(null);
     setReplayingRegressionId(regression.id);
 
     try {
@@ -308,6 +322,20 @@ export function AppShell() {
       setActionError(formatError(error));
     } finally {
       setReplayingRegressionId(undefined);
+    }
+  }
+
+  async function handleCreateSandboxPlan(regression: RegressionArtifact) {
+    setSandboxPlanError(null);
+    setPlanningRegressionId(regression.id);
+
+    try {
+      setSandboxPlan(await createSandboxPlan(regression.id));
+    } catch (error) {
+      setSandboxPlan(null);
+      setSandboxPlanError(formatError(error));
+    } finally {
+      setPlanningRegressionId(undefined);
     }
   }
 
@@ -497,6 +525,13 @@ export function AppShell() {
             run={currentRun}
           />
           <RunnerReadinessPanel />
+          <SandboxPlanPanel
+            regressions={regressions}
+            plan={sandboxPlan}
+            error={sandboxPlanError}
+            planningRegressionId={planningRegressionId}
+            onCreatePlan={(regression) => void handleCreateSandboxPlan(regression)}
+          />
           <RegressionPanel
             regressions={regressions}
             lastSavedRegressionId={lastSavedRegressionId}

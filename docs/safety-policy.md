@@ -30,6 +30,21 @@ Current dry-run policy:
 
 Do not convert dry-run preview decisions into real execution unless an explicitly reviewed sandbox runner, authorization model, and approval gate exist.
 
+## Reviewed Sandbox Replay Plan
+
+Phase 3B sandbox replay output is a reviewed plan only. It must report `mode: plan_only`, `mockOnly: true`, `fixtureOnly: true`, `reviewStatus: human_review_required`, and `requiresHumanReview: true`.
+
+Current sandbox plan policy:
+
+- The plan endpoint may look up only the in-memory regression, baseline run, project, scenario pack, and agent target context.
+- Allowed fixture IDs are synthetic allowlist metadata for future review only.
+- No fixture replay endpoint exists in Phase 3B.
+- No arbitrary file paths, URLs, shell commands, tool names, MCP calls, model calls, email targets, database targets, secrets, or live targets may be accepted from the client.
+- Arbitrary file reads, arbitrary file writes, shell commands, network requests, live target access, MCP tool calls, model calls, email sends, database queries, destructive operations, secret access, background workers, and persistence writes remain blocked or not implemented.
+- Sandbox plans are not runtime isolation proof and are not evidence that a real code mitigation worked.
+
+Do not convert sandbox plans into fixture replay or real sandbox execution unless the fixture allowlist, authorization model, and approval gate are explicitly reviewed and validated first.
+
 ## Synthetic Examples Only
 
 Starter scenario packs must use synthetic examples:

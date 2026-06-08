@@ -181,8 +181,8 @@ export function ReplayComparisonPanel({
             />
             <p>
               This compares two synthetic mock runs. It does not prove a real
-              mitigation worked. A future sandbox runner will compare
-              patched-agent behavior.
+              mitigation worked. A future explicitly reviewed sandbox path may
+              compare patched-agent behavior.
             </p>
           </div>
         </div>

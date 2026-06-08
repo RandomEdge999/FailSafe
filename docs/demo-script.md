@@ -42,7 +42,7 @@ Click Replay Mock on the saved artifact. The UI calls `POST /regressions/:id/rep
 
 Show the Baseline vs Replay panel. Explain that the UI calls `GET /runs/:id/comparison` for the replay run and compares status, score delta, finding count delta, trace event count delta, matching trace event types, missing expected trace event types, and new replay trace event types. Emphasize that this compares two synthetic mock runs. It does not prove a real mitigation worked, and no patched-agent sandbox execution exists yet.
 
-## 4:20 - Runner Readiness And Boundaries
+## 4:20 - Runner And Sandbox Readiness
 
 Show the Runner Readiness panel. Explain that Phase 3A adds a reviewed dry-run runner contract and deny-by-default policy preview, not real sandbox execution. Point out the current mode:
 
@@ -57,6 +57,17 @@ Show the Runner Readiness panel. Explain that Phase 3A adds a reviewed dry-run r
 
 Explain that `POST /runner/dry-run` can model policy decisions and trace-like evidence for intended actions, but every result returns `executed: false` and `dryRunOnly: true`.
 
+Show the Sandbox Planning panel. Generate a plan for the saved regression and point out:
+
+- mode: plan_only
+- review status: human_review_required
+- allowed fixture IDs are synthetic allowlist metadata only
+- no arbitrary execution
+- blocked shell, network, MCP, model, email, database, arbitrary file, destructive, secret, persistence, and background-worker capabilities
+- real sandbox execution and fixture replay execution are not implemented yet
+
+Explain that `POST /regressions/:id/sandbox-plan` prepares a reviewed plan from the in-memory regression and baseline run. It does not execute tools, shell commands, file actions, network calls, MCP servers, model calls, email, databases, or external systems.
+
 Point out what remains intentionally mocked: no real tools, file operations, shell commands, network calls, LLM calls, MCP execution, Copilot invocation, email, database actions, persistence, auth, queues, or deployment infrastructure.
 
 Optionally show the safe local CLI while the API is still running:
@@ -65,9 +76,10 @@ Optionally show the safe local CLI while the API is still running:
 pnpm failsafe regressions
 pnpm failsafe replay <regression-id>
 pnpm failsafe runner preview
+pnpm failsafe sandbox plan <regression-id>
 ```
 
-Explain that the CLI only calls the mock API, only works with in-memory regressions from the current API process, and does not execute tools, shell commands, file actions, network requests, MCP servers, model calls, email, databases, or external systems.
+Explain that the CLI only calls the mock API, only works with in-memory regressions from the current API process, and does not execute tools, shell commands, file actions, network requests, MCP servers, model calls, email, databases, or external systems. The sandbox command creates a reviewed plan only.
 
 ## 4:45 - Microsoft and Copilot Angle
 

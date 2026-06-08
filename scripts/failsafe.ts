@@ -1,9 +1,11 @@
 import {
   RegressionArtifactSchema,
   RunnerDryRunResultSchema,
+  SandboxReplayPlanSchema,
   ScenarioRunSchema,
   type RegressionArtifact,
   type RunnerDryRunResult,
+  type SandboxReplayPlan,
   type ScenarioRun
 } from "@failsafe/schemas";
 
@@ -33,6 +35,8 @@ Usage:
   pnpm failsafe replay <regression-id>
   pnpm failsafe runner --help
   pnpm failsafe runner preview
+  pnpm failsafe sandbox --help
+  pnpm failsafe sandbox plan <regression-id>
 
 Environment:
   FAILSAFE_API_BASE_URL  Override the mock API base URL. Default: http://localhost:4000
@@ -80,6 +84,24 @@ Notes:
   This is a policy preview only. It does not execute tools, shell commands,
   file actions, network calls, MCP servers, model calls, email, databases, or
   external systems.`);
+}
+
+function printSandboxHelp() {
+  console.log(`FailSafe reviewed sandbox plan
+
+Usage:
+  pnpm failsafe sandbox plan <regression-id>
+
+Behavior:
+  Calls POST /regressions/:id/sandbox-plan on the running mock API and prints a
+  reviewed plan for future fixture-only replay.
+
+Notes:
+  Start the mock API with \`pnpm dev:api\`.
+  This command creates a reviewed plan only. It does not execute tools, shell
+  commands, file actions, network calls, MCP servers, model calls, email,
+  databases, or external systems.
+  In-memory regressions disappear when the API process restarts.`);
 }
 
 function delay(ms: number) {
@@ -292,6 +314,48 @@ function printRunnerPreview(result: RunnerDryRunResult) {
   );
 }
 
+function formatList(values: string[]) {
+  return values.length > 0 ? values.join(", ") : "none";
+}
+
+function printSandboxPlan(plan: SandboxReplayPlan) {
+  console.log("FailSafe reviewed sandbox plan created");
+  console.log(`API base URL: ${apiBaseUrl}`);
+  console.log(`Plan ID: ${plan.id}`);
+  console.log(`Review status: ${plan.reviewStatus}`);
+  console.log(`Mode: ${plan.mode}`);
+  console.log(`Regression ID: ${plan.regressionId}`);
+  console.log(`Baseline run ID: ${plan.baselineRunId}`);
+  console.log(`Allowed fixture IDs: ${formatList(plan.allowedFixtureIds)}`);
+  console.log(`Blocked capabilities: ${formatList(plan.blockedCapabilities)}`);
+  console.log(
+    `Not-implemented capabilities: ${formatList(plan.notImplementedCapabilities)}`
+  );
+  console.log(`Safety statement: ${plan.safetyStatement}`);
+  console.log(
+    "This command creates a reviewed plan only. It does not execute tools, shell commands, file actions, network calls, MCP servers, model calls, email, databases, or external systems."
+  );
+}
+
+async function createSandboxReplayPlan(regressionId: string | undefined) {
+  if (!regressionId) {
+    throw new CliError(
+      "Missing regression ID. Run `pnpm failsafe sandbox --help` for usage."
+    );
+  }
+
+  const plan = await requestJson(
+    `/regressions/${encodeURIComponent(regressionId)}/sandbox-plan`,
+    (value) => SandboxReplayPlanSchema.parse(value),
+    {
+      body: "{}",
+      method: "POST"
+    }
+  );
+
+  printSandboxPlan(plan);
+}
+
 async function previewRunnerPolicy() {
   const result = await requestJson(
     "/runner/dry-run",
@@ -340,6 +404,24 @@ async function main() {
 
     throw new CliError(
       `Unknown runner command: ${subcommand}. Run \`pnpm failsafe runner --help\`.`
+    );
+  }
+
+  if (command === "sandbox") {
+    const [subcommand, regressionId] = args;
+
+    if (!subcommand || subcommand === "--help" || subcommand === "-h") {
+      printSandboxHelp();
+      return;
+    }
+
+    if (subcommand === "plan") {
+      await createSandboxReplayPlan(regressionId);
+      return;
+    }
+
+    throw new CliError(
+      `Unknown sandbox command: ${subcommand}. Run \`pnpm failsafe sandbox --help\`.`
     );
   }
 
