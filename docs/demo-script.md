@@ -1,120 +1,89 @@
-# Five-Minute Hackathon Demo Script
+# Five-minute demo script
 
-## 0:00 - Problem Intro
+Goal: show FailSafe as a Microsoft Foundry-ready crash-test studio that produces honest local evidence without claiming live Foundry execution.
 
-Agents can read files, call tools, retrieve documents, and use MCP servers. That power creates new failure paths: poisoned tool metadata, indirect prompt injection, missing approvals, and task drift. FailSafe crash-tests agents before production does.
+## 0:00 to 0:30 - Set up the problem
 
-## 0:30 - Import Reviewed Foundry Agent
+"Agent builders can create Foundry and Copilot-style agents quickly, but trust-boundary failures still hide in logs: untrusted content influences planning, tool metadata changes intent, and approvals are assumed. FailSafe turns that into a crash-test workflow."
 
-Open the FailSafe Crash Lab console. Point out the generated FailSafe logo, crash-lab visual treatment, Foundry readiness, missing optional Foundry env vars, and blocked operations. Click Import Foundry Manifest. Explain that this imports an app-owned reviewed Microsoft Foundry-style manifest with model, instructions, tools, identity/RBAC, observability, and runtime safety metadata. No credentials, live tools, MCP servers, shell commands, arbitrary files, email, databases, or external targets are executed.
+Show the Studio dashboard.
 
-Show the imported `Foundry Invoice Review Agent`, then open the trust-boundary map preview. Point out user input, reviewed instructions, tool calls, MCP metadata, identity, observability, and human approval gates.
+## 0:30 to 1:15 - Foundry evidence workflow
 
-## 1:00 - Run Crash Test
+Click `Import manifest`.
 
-Select the Tool Poisoning Pack and click Crash-Test Foundry Agent or Run Crash Test. Explain that this is a defensive Foundry manifest crash test using reviewed agent metadata and local evidence. The run is created through `POST /agents/:id/crash-test`, persisted in `.failsafe-data`, and rendered through the same typed timeline as every FailSafe run.
+Click `Load recorded evidence`.
 
-## 1:30 - Watch Failure Timeline
+Show readiness:
 
-Walk through the timeline:
+- manifest mode if Foundry env vars are absent;
+- blocked capabilities include live tools, MCP execution, shell, arbitrary files, email, database, and external targets;
+- recorded evidence is JSON-body import only.
 
-- Reviewed Foundry manifest imported.
-- Trust boundaries mapped from tools, MCP metadata, identity, and approval gates.
-- Prompt assembled with explicit trusted and untrusted sections.
-- Policy blocks connected execution and live tools.
-- Finding is created from the modeled Foundry boundary.
-- Mitigation prompt is prepared without invoking Copilot or executing a patch.
+Show agent inventory and recorded evidence cards.
 
-Highlight the trust-boundary labels. Click a timeline event and show event ID, actor, input source, parent event, metadata, and pretty-printed raw evidence.
+## 1:15 to 2:00 - Trust map
 
-## 2:20 - Show Scorecard
+Show the trust-boundary map.
 
-Show the FailSafe score and factor breakdown. Explain that the score is a product heuristic, not a certification.
+Narration:
 
-## 2:50 - Generate Mitigation
+"FailSafe maps the agent like an operations review: user input, reviewed instructions, tool metadata, identity/RBAC, approval gate, and policy decision. This is why it is useful for Foundry and Copilot-style builders: it converts agent configuration into reviewable runtime boundaries."
 
-Click a finding card and show the detail panel: category, severity, confidence, status, root cause, evidence event IDs, recommended mitigations, generated Copilot prompt preview, and suggested regression name. Then click Fix with Copilot. Explain that the API generates a typed Patch Coach plan with mitigation steps, Copilot prompt payloads, and a regression checklist. No live Copilot call or code patch is executed from the UI.
+## 2:00 to 2:50 - Crash test and finding
 
-## 3:30 - Save, Replay, And Compare Regression
+Click `Crash-test evidence`.
 
-Click Save Regression. The UI calls `POST /regressions/mock`, then displays the saved local artifact with finding count, trace event count, expected safe behavior context, scenario engine version, and replay guidance. Explain that it is persisted under the app-owned `.failsafe-data` store.
+Open the crash timeline and finding detail.
 
-Click Run Foundry Fixture Replay. The UI calls `POST /agents/:id/fixture-replay`; the API creates a reviewed local fixture replay run from app-owned evidence. Explain that this proves the local fixture path and evidence rendering, not production safety or live Foundry mitigation.
+Narration:
 
-Then show the Sample Lab fallback controls. Click Replay Mock on a Sample Lab saved artifact. The UI calls `POST /regressions/:id/replay-mock`; the API verifies the artifact is mock replayable and reruns the same deterministic synthetic scenario with the saved seed. The replayed run appears in the same timeline and score panels.
+"This is not a live attack. It is reviewed recorded evidence evaluated locally. The timeline shows exactly where untrusted content, tool intent, or approval state crossed a boundary. The finding explains root cause and mitigation."
 
-Show the Baseline vs Replay panel. Explain that the UI calls `GET /runs/:id/comparison` for the replay run and compares status, score delta, finding count delta, trace event count delta, matching trace event types, missing expected trace event types, and new replay trace event types. Emphasize that this compares synthetic evidence only.
+## 2:50 to 3:30 - Patch Coach
 
-Click Fixture Replay on the same Sample Lab artifact. The UI calls `POST /regressions/:id/fixture-replay`; the API creates a reviewed fixture-only replay run from app-owned synthetic fixture IDs. Show the improved score and missing expected finding category in Baseline vs Replay. Explain that this is not arbitrary sandbox execution or real patched-agent proof.
+Click `Fix with Copilot`.
 
-## 4:20 - Runner And Sandbox Readiness
+Show the Patch Coach plan and prompt payload.
 
-Show the Runner Readiness panel. Explain that Phase 3A adds a reviewed dry-run runner contract and deny-by-default policy preview, not real sandbox execution. Point out the current mode:
+Narration:
 
-- mock + dry_run policy preview
-- real sandbox execution: not implemented
-- file writes: blocked
-- shell commands: blocked
-- network requests: blocked
-- MCP execution: not implemented
-- LLM calls: not implemented
-- email and database actions: blocked
+"FailSafe does not invoke Copilot or edit files. It prepares a bounded Copilot-ready prompt payload with evidence, constraints, and regression expectations. A developer reviews and applies any real patch."
 
-Explain that `POST /runner/dry-run` can model policy decisions and trace-like evidence for intended actions, but every result returns `executed: false` and `dryRunOnly: true`.
+## 3:30 to 4:15 - Regression and replay
 
-Show the Sandbox Planning panel. Generate a plan for the saved regression and point out:
+Click `Save Regression`.
 
-- mode: plan_only
-- review status: human_review_required
-- allowed fixture IDs are synthetic allowlist metadata
-- no arbitrary execution
-- blocked shell, network, MCP, model, email, database, arbitrary file, destructive, secret, and background-worker capabilities
-- real sandbox execution is not implemented
+Click `Fixture Replay`.
 
-Explain that `POST /regressions/:id/sandbox-plan` prepares a reviewed plan from the local regression and baseline run. It does not execute tools, shell commands, file actions, network calls, MCP servers, model calls, email, databases, or external systems.
+Show replay comparison.
 
-Export a Safety Card from the Reports and Data panel. Show the `.failsafe-data/reports` path and the Markdown preview. Point out what remains intentionally mocked or future work: no real sandbox isolation, live tools, arbitrary file operations, shell commands, network calls, LLM calls, MCP execution, Copilot invocation, email, database actions, auth, queues, or deployment infrastructure.
+Narration:
 
-Optionally show the safe local CLI while the API is still running:
+"The regression captures trace IDs, finding IDs, expected behavior, and engine version. Fixture replay uses reviewed app-owned fixtures only, so the team can show before/after evidence without executing live tools."
+
+## 4:15 to 4:45 - Safety Card
+
+Open `Safety card`.
+
+Click `Export Safety Card`.
+
+Show the report path and content.
+
+Narration:
+
+"The Safety Card states evidence mode, manifest or evidence IDs, boundaries, blocked capabilities, limitations, and human review requirements. It is a review artifact, not a certification."
+
+## 4:45 to 5:00 - CLI evidence
+
+Run one command while the API is active:
 
 ```bash
-pnpm failsafe regressions
 pnpm failsafe foundry readiness
-pnpm failsafe foundry import-sample
-pnpm failsafe agents
-pnpm failsafe agent trust-map <agent-id>
-pnpm failsafe agent crash-test <agent-id>
-pnpm failsafe agent fixture-replay <agent-id>
-pnpm failsafe replay <regression-id>
-pnpm failsafe sandbox fixture-replay <regression-id>
-pnpm failsafe patch-coach <run-id>
-pnpm failsafe report <run-id>
-pnpm failsafe runner preview
-pnpm failsafe sandbox plan <regression-id>
+pnpm failsafe evidence list
+pnpm failsafe runs
 ```
 
-Explain that the CLI only calls the local API and app-owned store. It does not execute tools, shell commands, arbitrary file actions, network requests, MCP servers, model calls, email, databases, or external systems. Fixture replay uses reviewed synthetic fixtures only.
+Close:
 
-## 4:45 - Microsoft and Copilot Angle
-
-Close with the project fit:
-
-- Built for Microsoft agent builders.
-- Aligns with Foundry agent concepts: model, instructions, tools, identity, observability, runtime, and safety gates.
-- Uses GitHub Copilot instructions, prompt files, and custom agent roles.
-- Helps developers reason about reliability and safety before production.
-- Turns AI safety from vague advice into a visible, repeatable workflow.
-
-## Demo Screenshots
-
-The tracked screenshots for README and submission prep are captured from the real local Studio:
-
-- `docs/assets/screenshots/dashboard.png`
-- `docs/assets/screenshots/timeline-finding-detail.png`
-- `docs/assets/screenshots/patch-coach.png`
-- `docs/assets/screenshots/fixture-replay-comparison.png`
-- `docs/assets/screenshots/safety-card.png`
-- `docs/assets/brand/failsafe-logo.png`
-- `docs/assets/brand/crash-lab-hero.png`
-
-Use these as backup assets for the final recording and submission page. The final video URL and team/member details are intentionally left to the submitter.
+"FailSafe fills the gap between building an agent and trusting it enough to ship: visible boundaries, local crash tests, regression evidence, and honest limitations."

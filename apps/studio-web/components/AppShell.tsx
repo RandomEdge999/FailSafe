@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
+  AgentEvidenceCapture,
   Finding,
   FoundryAgentImport,
   FoundryReadinessResult,
@@ -17,7 +18,16 @@ import type {
   TraceEvent
 } from "@failsafe/schemas";
 import type { ReplayComparison } from "@failsafe/schemas";
-import { AlertTriangle, Loader2, RefreshCcw } from "lucide-react";
+import {
+  AlertTriangle,
+  FileText,
+  FlaskConical,
+  LayoutDashboard,
+  Loader2,
+  RefreshCcw,
+  ShieldCheck,
+  WandSparkles
+} from "lucide-react";
 import { AgentOpsPanel } from "./AgentOpsPanel";
 import { CopilotPromptPanel } from "./CopilotPromptPanel";
 import { CrashTimeline } from "./CrashTimeline";
@@ -44,18 +54,34 @@ import {
   getRun,
   getRunComparison,
   importFoundryManifest,
+  importSampleEvidence,
   listAgents,
+  listEvidenceCaptures,
   listProjects,
   listRegressions,
   listRuns,
   listScenarios,
   runAgentCrashTest,
   runAgentFixtureReplay,
+  runEvidenceCrashTest,
   replayFixtureRegression,
   replayMockRegression,
   resetDemoData,
   saveRegression
 } from "../lib/api-client";
+
+type StudioView = "foundry" | "crash" | "patch" | "safety";
+
+const studioViews: Array<{
+  id: StudioView;
+  label: string;
+  icon: typeof LayoutDashboard;
+}> = [
+  { id: "foundry", label: "Foundry evidence", icon: LayoutDashboard },
+  { id: "crash", label: "Crash test", icon: FlaskConical },
+  { id: "patch", label: "Patch and regression", icon: WandSparkles },
+  { id: "safety", label: "Safety card", icon: FileText }
+];
 
 function formatError(error: unknown) {
   return error instanceof Error
@@ -91,9 +117,16 @@ function regressionName(
 export function AppShell() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [agents, setAgents] = useState<FoundryAgentImport[]>([]);
+  const [evidenceCaptures, setEvidenceCaptures] = useState<
+    AgentEvidenceCapture[]
+  >([]);
   const [foundryReadiness, setFoundryReadiness] =
     useState<FoundryReadinessResult | null>(null);
   const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>();
+  const [selectedEvidenceId, setSelectedEvidenceId] = useState<
+    string | undefined
+  >();
+  const [activeView, setActiveView] = useState<StudioView>("foundry");
   const [trustMap, setTrustMap] = useState<AgentTrustBoundaryMap | null>(null);
   const [scenarioPacks, setScenarioPacks] = useState<ScenarioPack[]>([]);
   const [currentRun, setCurrentRun] = useState<ScenarioRun | null>(null);
@@ -148,10 +181,21 @@ export function AppShell() {
   const [isImportingAgent, setIsImportingAgent] = useState(false);
   const [isRunningAgent, setIsRunningAgent] = useState(false);
   const [isRunningAgentFixture, setIsRunningAgentFixture] = useState(false);
+  const [isImportingEvidence, setIsImportingEvidence] = useState(false);
+  const [isRunningEvidence, setIsRunningEvidence] = useState(false);
 
-  const project = projects[0] ?? null;
   const selectedAgent =
     agents.find((agent) => agent.id === selectedAgentId) ?? agents[0] ?? null;
+  const selectedEvidence =
+    evidenceCaptures.find((capture) => capture.id === selectedEvidenceId) ??
+    evidenceCaptures[0] ??
+    null;
+  const project =
+    projects.find((item) => item.id === currentRun?.projectId) ??
+    projects.find((item) => item.id === selectedAgent?.projectId) ??
+    projects.find((item) => item.id === selectedEvidence?.projectId) ??
+    projects[0] ??
+    null;
   const selectedPack = useMemo(
     () =>
       scenarioPacks.find((pack) => pack.id === selectedPackId) ??
@@ -236,6 +280,7 @@ export function AppShell() {
       const [
         loadedReadiness,
         loadedAgents,
+        loadedEvidence,
         loadedProjects,
         loadedScenarios,
         loadedRuns,
@@ -244,6 +289,7 @@ export function AppShell() {
         await Promise.all([
           getFoundryReadiness(),
           listAgents(),
+          listEvidenceCaptures(),
           listProjects(),
           listScenarios(),
           listRuns(),
@@ -254,6 +300,8 @@ export function AppShell() {
       setAgents(loadedAgents);
       const nextAgentId = selectedAgentId ?? loadedAgents[0]?.id;
       setSelectedAgentId(nextAgentId);
+      setEvidenceCaptures(loadedEvidence);
+      setSelectedEvidenceId(selectedEvidenceId ?? loadedEvidence[0]?.id);
       setProjects(loadedProjects);
       setScenarioPacks(loadedScenarios);
       setRegressions(loadedRegressions);
@@ -279,7 +327,7 @@ export function AppShell() {
     } finally {
       setIsLoading(false);
     }
-  }, [applyRun, selectedAgentId]);
+  }, [applyRun, selectedAgentId, selectedEvidenceId]);
 
   useEffect(() => {
     void loadStudioData();
@@ -303,6 +351,7 @@ export function AppShell() {
     setSandboxPlan(null);
     setSandboxPlanError(null);
     setIsRunning(true);
+    setActiveView("crash");
 
     try {
       const createdRun = selectedAgent
@@ -380,6 +429,7 @@ export function AppShell() {
     setSandboxPlan(null);
     setSandboxPlanError(null);
     setIsRunningAgent(true);
+    setActiveView("crash");
 
     try {
       applyRun(await runAgentCrashTest(selectedAgent.id, selectedPack.id));
@@ -408,6 +458,7 @@ export function AppShell() {
     setSandboxPlan(null);
     setSandboxPlanError(null);
     setIsRunningAgentFixture(true);
+    setActiveView("crash");
 
     try {
       applyRun(await runAgentFixtureReplay(selectedAgent.id, selectedPack.id));
@@ -419,12 +470,74 @@ export function AppShell() {
     }
   }
 
+  async function handleImportSampleEvidence() {
+    setAgentError(null);
+    setIsImportingEvidence(true);
+
+    try {
+      const imported = await importSampleEvidence();
+      const [loadedEvidence, loadedProjects] = await Promise.all([
+        listEvidenceCaptures(),
+        listProjects()
+      ]);
+
+      setEvidenceCaptures(loadedEvidence);
+      setProjects(loadedProjects);
+      setSelectedEvidenceId(imported.id);
+      setActiveView("foundry");
+    } catch (error) {
+      setAgentError(formatError(error));
+    } finally {
+      setIsImportingEvidence(false);
+    }
+  }
+
+  async function handleSelectEvidence(id: string) {
+    setAgentError(null);
+    setSelectedEvidenceId(id);
+  }
+
+  async function handleRunEvidenceCrashTest() {
+    if (!selectedEvidence || !selectedPack) {
+      return;
+    }
+
+    setAgentError(null);
+    setShowCopilotPanel(false);
+    setPatchCoachPlan(null);
+    setPatchCoachError(null);
+    setSafetyReport(null);
+    setReportError(null);
+    setFixtureReplayResult(null);
+    setReplayComparison(null);
+    setComparisonError(null);
+    setSandboxPlan(null);
+    setSandboxPlanError(null);
+    setIsRunningEvidence(true);
+    setActiveView("crash");
+
+    try {
+      const response = await runEvidenceCrashTest(
+        selectedEvidence.id,
+        selectedPack.id
+      );
+
+      applyRun(response.run);
+      setProjects(await listProjects());
+    } catch (error) {
+      setAgentError(formatError(error));
+    } finally {
+      setIsRunningEvidence(false);
+    }
+  }
+
   async function handleFixWithCopilot() {
     if (!currentRun || !selectedFinding) {
       return;
     }
 
     setShowCopilotPanel(true);
+    setActiveView("patch");
     setPatchCoachError(null);
     setPatchCoachPlan(null);
     setIsLoadingPatchCoach(true);
@@ -447,6 +560,7 @@ export function AppShell() {
 
     setActionError(null);
     setIsSavingRegression(true);
+    setActiveView("patch");
 
     try {
       const evidenceEventIds =
@@ -526,6 +640,7 @@ export function AppShell() {
       setReplayComparison(result.comparison);
       applyRun(result.replayRun);
       setLastFixtureReplayedRegressionId(regression.id);
+      setActiveView("patch");
     } catch (error) {
       setActionError(formatError(error));
     } finally {
@@ -539,6 +654,7 @@ export function AppShell() {
 
     try {
       setSandboxPlan(await createSandboxPlan(regression.id));
+      setActiveView("safety");
     } catch (error) {
       setSandboxPlan(null);
       setSandboxPlanError(formatError(error));
@@ -555,6 +671,7 @@ export function AppShell() {
     setReportError(null);
     setResetMessage(null);
     setIsCreatingReport(true);
+    setActiveView("safety");
 
     try {
       const linkedRegression = regressions.find(
@@ -588,6 +705,8 @@ export function AppShell() {
       setSafetyReport(null);
       setAgents([]);
       setSelectedAgentId(undefined);
+      setEvidenceCaptures([]);
+      setSelectedEvidenceId(undefined);
       setTrustMap(null);
       setFixtureReplayResult(null);
       setReplayComparison(null);
@@ -620,19 +739,53 @@ export function AppShell() {
     />
   );
 
+  const modeSwitcher = (
+    <nav
+      aria-label="Studio views"
+      className="rounded-lg border border-slate-200 bg-white p-2 shadow-sm"
+    >
+      <div className="grid gap-1">
+        {studioViews.map((view) => {
+          const Icon = view.icon;
+          const selected = activeView === view.id;
+
+          return (
+            <button
+              key={view.id}
+              type="button"
+              onClick={() => setActiveView(view.id)}
+              className={`flex min-h-11 items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-semibold transition ${
+                selected
+                  ? "bg-brand-50 text-brand-800"
+                  : "text-slate-700 hover:bg-slate-100"
+              }`}
+              aria-current={selected ? "page" : undefined}
+            >
+              <Icon
+                className={`h-4 w-4 ${selected ? "text-brand-700" : "text-slate-500"}`}
+                aria-hidden="true"
+              />
+              {view.label}
+            </button>
+          );
+        })}
+      </div>
+    </nav>
+  );
+
   if (isLoading) {
     return (
-      <main className="min-h-screen">
+      <main className="min-h-screen bg-app">
         {header}
         <div className="mx-auto w-full max-w-[1600px] px-5 py-5 md:px-8">
-          <section className="rounded-lg border border-white/10 bg-panel p-8 shadow-lab">
+          <section className="rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
             <div className="flex items-center gap-3">
               <Loader2 className="h-5 w-5 animate-spin text-signal" />
               <div>
-                <p className="text-sm font-semibold text-white">
+                <p className="text-sm font-semibold text-slate-950">
                   Loading FailSafe Studio
                 </p>
-                <p className="mt-1 text-sm text-slate-300">
+                <p className="mt-1 text-sm text-slate-600">
                   Fetching Foundry readiness, projects, scenarios, runs,
                   findings, and saved regressions from the orchestrator API.
                 </p>
@@ -646,20 +799,20 @@ export function AppShell() {
 
   if (loadError) {
     return (
-      <main className="min-h-screen">
+      <main className="min-h-screen bg-app">
         {header}
         <div className="mx-auto w-full max-w-[1600px] px-5 py-5 md:px-8">
-          <section className="rounded-lg border border-danger/30 bg-panel p-8 shadow-lab">
+          <section className="rounded-lg border border-danger/30 bg-white p-8 shadow-sm">
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-6 w-6 shrink-0 text-danger" />
               <div className="min-w-0">
                 <p className="text-sm font-semibold uppercase text-danger">
                   Local API unavailable
                 </p>
-                <h2 className="mt-2 text-xl font-semibold text-white">
+                <h2 className="mt-2 text-xl font-semibold text-slate-950">
                   The API-backed crash-lab flow could not load.
                 </h2>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
                   {loadError} Run <code className="text-signal">pnpm dev</code>{" "}
                   from the project root to start both the Fastify API and the
                   Next.js studio.
@@ -667,7 +820,7 @@ export function AppShell() {
                 <button
                   type="button"
                   onClick={() => void loadStudioData()}
-                  className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-md border border-white/15 bg-white/8 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/15"
+                  className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
                 >
                   <RefreshCcw className="h-4 w-4" aria-hidden="true" />
                   Retry API Load
@@ -682,7 +835,7 @@ export function AppShell() {
 
   if (!project || scenarioPacks.length === 0) {
     return (
-      <main className="min-h-screen">
+      <main className="min-h-screen bg-app">
         {header}
         <div className="mx-auto w-full max-w-[1600px] px-5 py-5 md:px-8">
           <EmptyState
@@ -698,7 +851,7 @@ export function AppShell() {
 
   if (!activePack) {
     return (
-      <main className="min-h-screen">
+      <main className="min-h-screen bg-app">
         {header}
         <div className="mx-auto w-full max-w-[1600px] px-5 py-5 md:px-8">
           <EmptyState
@@ -710,147 +863,220 @@ export function AppShell() {
     );
   }
 
-  return (
-    <main className="min-h-screen">
-      {header}
-      <div className="mx-auto grid w-full max-w-[1600px] gap-5 px-5 py-5 md:px-8 xl:grid-cols-[340px_minmax(0,1fr)_360px]">
-        <ScenarioLibrary
-          packs={scenarioPacks}
-          selectedPackId={activePack.id}
-          onSelect={(packId) => {
-            setSelectedPackId(packId);
-            setShowCopilotPanel(false);
-          }}
-        />
-        <div className="space-y-5">
-          <AgentOpsPanel
-            agents={agents}
-            readiness={foundryReadiness}
-            selectedAgentId={selectedAgent?.id}
-            selectedPack={activePack}
-            trustMap={trustMap}
-            isImporting={isImportingAgent}
-            isRunning={isRunningAgent}
-            isFixtureReplaying={isRunningAgentFixture}
-            error={agentError}
-            onImportSample={() => void handleImportFoundrySample()}
-            onSelectAgent={(id) => void handleSelectAgent(id)}
-            onRunCrashTest={() => void handleRunFoundryCrashTest()}
-            onRunFixtureReplay={() => void handleRunFoundryFixtureReplay()}
+  const findingsPanel = (
+    <section className="space-y-3">
+      <div>
+        <p className="text-xs font-semibold uppercase text-brand-700">
+          Findings
+        </p>
+        <h2 className="text-lg font-semibold text-slate-950">
+          Root-cause cards
+        </h2>
+      </div>
+      {currentRun && currentRun.findings.length > 0 ? (
+        currentRun.findings.map((finding) => (
+          <FindingCard
+            key={finding.id}
+            finding={finding}
+            isSelected={selectedFinding?.id === finding.id}
+            onSelect={(item) => {
+              setSelectedFindingId(item.id);
+              setShowCopilotPanel(false);
+            }}
           />
+        ))
+      ) : (
+        <EmptyState
+          title="No findings yet"
+          body={
+            isRunInProgress(currentRun)
+              ? "The local lifecycle is still running. Findings appear when the API completes the scenario."
+              : "A clean run can still preserve typed evidence for future regression checks."
+          }
+        />
+      )}
+    </section>
+  );
+
+  const comparisonPanel =
+    currentRun?.baselineRunId ||
+    replayComparison ||
+    isLoadingComparison ||
+    comparisonError ? (
+      <ReplayComparisonPanel
+        comparison={replayComparison}
+        error={comparisonError}
+        isLoading={isLoadingComparison}
+      />
+    ) : null;
+
+  return (
+    <main className="min-h-screen bg-app">
+      {header}
+      <div className="mx-auto grid w-full max-w-[1680px] gap-5 px-5 py-5 md:px-8 xl:grid-cols-[280px_minmax(0,1fr)_360px]">
+        <aside className="space-y-5">
+          {modeSwitcher}
+          <ScenarioLibrary
+            packs={scenarioPacks}
+            selectedPackId={activePack.id}
+            onSelect={(packId) => {
+              setSelectedPackId(packId);
+              setShowCopilotPanel(false);
+            }}
+          />
+        </aside>
+        <div className="space-y-5">
           {actionError ? (
-            <div className="rounded-lg border border-danger/30 bg-danger/10 p-4 text-sm leading-6 text-slate-200">
+            <div className="rounded-lg border border-danger/30 bg-danger/10 p-4 text-sm leading-6 text-slate-800">
               {actionError}
             </div>
           ) : null}
-          <CrashTimeline
-            run={currentRun}
-            selectedEventId={selectedEventId}
-            onSelectEvent={(event: TraceEvent) => setSelectedEventId(event.id)}
-          />
-          {currentRun ? (
-            <SafetyScoreCard score={currentRun.score} />
-          ) : (
-            <EmptyState
-              title="No score loaded"
-              body="Run a crash test to load the scorecard from the API."
+
+          {activeView === "foundry" ? (
+            <AgentOpsPanel
+              agents={agents}
+              evidenceCaptures={evidenceCaptures}
+              readiness={foundryReadiness}
+              selectedAgentId={selectedAgent?.id}
+              selectedEvidenceId={selectedEvidence?.id}
+              selectedPack={activePack}
+              trustMap={trustMap}
+              isImporting={isImportingAgent}
+              isImportingEvidence={isImportingEvidence}
+              isRunning={isRunningAgent}
+              isRunningEvidence={isRunningEvidence}
+              isFixtureReplaying={isRunningAgentFixture}
+              error={agentError}
+              onImportSample={() => void handleImportFoundrySample()}
+              onImportEvidence={() => void handleImportSampleEvidence()}
+              onSelectAgent={(id) => void handleSelectAgent(id)}
+              onSelectEvidence={(id) => void handleSelectEvidence(id)}
+              onRunCrashTest={() => void handleRunFoundryCrashTest()}
+              onRunEvidenceCrashTest={() => void handleRunEvidenceCrashTest()}
+              onRunFixtureReplay={() => void handleRunFoundryFixtureReplay()}
             />
-          )}
-          <section className="space-y-3">
-            <div>
-              <p className="text-xs font-semibold uppercase text-signal">
-                Findings
-              </p>
-              <h2 className="text-lg font-semibold text-white">
-                Root-cause cards
-              </h2>
-            </div>
-            {currentRun && currentRun.findings.length > 0 ? (
-              currentRun.findings.map((finding) => (
-                <FindingCard
-                  key={finding.id}
-                  finding={finding}
-                  isSelected={selectedFinding?.id === finding.id}
-                  onSelect={(item) => {
-                    setSelectedFindingId(item.id);
-                    setShowCopilotPanel(false);
-                  }}
-                />
-              ))
-            ) : (
-              <EmptyState
-                title="No findings yet"
-                body={
-                  isRunInProgress(currentRun)
-                    ? "The local lifecycle is still running. Findings appear when the API completes the scenario."
-                    : "A clean run will still save trace evidence for future regression checks."
+          ) : null}
+
+          {activeView === "crash" ? (
+            <>
+              <CrashTimeline
+                run={currentRun}
+                selectedEventId={selectedEventId}
+                onSelectEvent={(event: TraceEvent) =>
+                  setSelectedEventId(event.id)
                 }
               />
-            )}
-          </section>
-          <FindingDetailPanel
-            finding={selectedFinding}
-            scenarioPack={activePack}
-            trace={currentRun?.trace ?? []}
-          />
-          <CopilotPromptPanel
-            error={patchCoachError}
-            finding={selectedFinding}
-            isOpen={showCopilotPanel}
-            isLoading={isLoadingPatchCoach}
-            plan={patchCoachPlan}
-            scenarioPack={activePack}
-            trace={currentRun?.trace ?? []}
-          />
+              {currentRun ? (
+                <SafetyScoreCard score={currentRun.score} />
+              ) : (
+                <EmptyState
+                  title="No score loaded"
+                  body="Run a Foundry manifest, recorded evidence, or Sample Lab crash test to load the scorecard from the API."
+                />
+              )}
+              {findingsPanel}
+              <FindingDetailPanel
+                finding={selectedFinding}
+                scenarioPack={activePack}
+                trace={currentRun?.trace ?? []}
+              />
+            </>
+          ) : null}
+
+          {activeView === "patch" ? (
+            <>
+              {findingsPanel}
+              <FindingDetailPanel
+                finding={selectedFinding}
+                scenarioPack={activePack}
+                trace={currentRun?.trace ?? []}
+              />
+              <CopilotPromptPanel
+                error={patchCoachError}
+                finding={selectedFinding}
+                isOpen={showCopilotPanel}
+                isLoading={isLoadingPatchCoach}
+                plan={patchCoachPlan}
+                scenarioPack={activePack}
+                trace={currentRun?.trace ?? []}
+              />
+              <RegressionPanel
+                fixtureReplayingRegressionId={fixtureReplayingRegressionId}
+                regressions={regressions}
+                lastFixtureReplayedRegressionId={lastFixtureReplayedRegressionId}
+                lastSavedRegressionId={lastSavedRegressionId}
+                lastReplayedRegressionId={lastReplayedRegressionId}
+                onFixtureReplay={(regression) =>
+                  void handleFixtureReplayRegression(regression)
+                }
+                onReplayMock={(regression) =>
+                  void handleReplayRegression(regression)
+                }
+                replayingRegressionId={replayingRegressionId}
+              />
+              {comparisonPanel}
+            </>
+          ) : null}
+
+          {activeView === "safety" ? (
+            <>
+              <RunnerReadinessPanel />
+              <ReportPanel
+                currentRun={currentRun}
+                error={reportError}
+                fixtureReplayResult={fixtureReplayResult}
+                isCreating={isCreatingReport}
+                isResetting={isResettingDemoData}
+                onCreateReport={() => void handleCreateSafetyReport()}
+                onResetDemoData={() => void handleResetDemoData()}
+                report={safetyReport}
+                resetMessage={resetMessage}
+              />
+              <SandboxPlanPanel
+                regressions={regressions}
+                plan={sandboxPlan}
+                error={sandboxPlanError}
+                planningRegressionId={planningRegressionId}
+                onCreatePlan={(regression) =>
+                  void handleCreateSandboxPlan(regression)
+                }
+              />
+              {comparisonPanel}
+            </>
+          ) : null}
         </div>
-        <div className="space-y-5">
+        <aside className="space-y-5">
           <RiskInspector
             project={project}
             selectedPack={activePack}
             run={currentRun}
           />
-          <RunnerReadinessPanel />
-          <ReportPanel
-            currentRun={currentRun}
-            error={reportError}
-            fixtureReplayResult={fixtureReplayResult}
-            isCreating={isCreatingReport}
-            isResetting={isResettingDemoData}
-            onCreateReport={() => void handleCreateSafetyReport()}
-            onResetDemoData={() => void handleResetDemoData()}
-            report={safetyReport}
-            resetMessage={resetMessage}
-          />
-          <SandboxPlanPanel
-            regressions={regressions}
-            plan={sandboxPlan}
-            error={sandboxPlanError}
-            planningRegressionId={planningRegressionId}
-            onCreatePlan={(regression) => void handleCreateSandboxPlan(regression)}
-          />
-          <RegressionPanel
-            fixtureReplayingRegressionId={fixtureReplayingRegressionId}
-            regressions={regressions}
-            lastFixtureReplayedRegressionId={lastFixtureReplayedRegressionId}
-            lastSavedRegressionId={lastSavedRegressionId}
-            lastReplayedRegressionId={lastReplayedRegressionId}
-            onFixtureReplay={(regression) =>
-              void handleFixtureReplayRegression(regression)
-            }
-            onReplayMock={(regression) => void handleReplayRegression(regression)}
-            replayingRegressionId={replayingRegressionId}
-          />
-          {currentRun?.baselineRunId ||
-          replayComparison ||
-          isLoadingComparison ||
-          comparisonError ? (
-            <ReplayComparisonPanel
-              comparison={replayComparison}
-              error={comparisonError}
-              isLoading={isLoadingComparison}
+          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-950">
+              <ShieldCheck className="h-4 w-4 text-brand-700" aria-hidden="true" />
+              Safety boundary
+            </div>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              The primary workflow uses reviewed manifests, recorded evidence,
+              and app-owned fixtures. Live Foundry execution, MCP calls, shell
+              commands, arbitrary files, email, databases, and external targets
+              remain disabled.
+            </p>
+          </div>
+          {activeView !== "safety" ? (
+            <ReportPanel
+              currentRun={currentRun}
+              error={reportError}
+              fixtureReplayResult={fixtureReplayResult}
+              isCreating={isCreatingReport}
+              isResetting={isResettingDemoData}
+              onCreateReport={() => void handleCreateSafetyReport()}
+              onResetDemoData={() => void handleResetDemoData()}
+              report={safetyReport}
+              resetMessage={resetMessage}
             />
           ) : null}
-        </div>
+        </aside>
       </div>
     </main>
   );

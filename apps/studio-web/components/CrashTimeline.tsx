@@ -49,7 +49,7 @@ export function CrashTimeline({
     return (
       <EmptyState
         title="No crash trace loaded"
-        body="Run a starter pack to load the predefined mock timeline."
+        body="Import a Foundry manifest, load recorded evidence, or run the Sample Lab fallback to populate the trace timeline."
       />
     );
   }

@@ -1,8 +1,16 @@
 import type { FastifyInstance } from "fastify";
 import {
   CreateAgentCrashTestInputSchema,
-  FoundryAgentImportInputSchema
+  EvidenceCrashTestResponseSchema,
+  FoundryAgentImportInputSchema,
+  ImportAgentEvidenceInputSchema
 } from "@failsafe/schemas";
+import {
+  createEvidenceCrashTest,
+  getEvidenceCapture,
+  importAgentEvidence,
+  listEvidenceCaptures
+} from "../services/evidence-service";
 import {
   createFoundryCrashTest,
   createFoundryFixtureReplay,
@@ -31,6 +39,50 @@ export async function registerFoundryRoutes(app: FastifyInstance) {
     }
 
     return reply.code(201).send(importFoundryManifest(parsed.data));
+  });
+
+  app.post("/foundry/evidence/import", async (request, reply) => {
+    const parsed = ImportAgentEvidenceInputSchema.safeParse(request.body);
+
+    if (!parsed.success) {
+      return reply.code(400).send({
+        error: "invalid_agent_evidence_input",
+        issues: parsed.error.issues
+      });
+    }
+
+    return reply.code(201).send(importAgentEvidence(parsed.data));
+  });
+
+  app.get("/foundry/evidence", async () => listEvidenceCaptures());
+
+  app.get("/foundry/evidence/:id", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const capture = getEvidenceCapture(id);
+
+    if (!capture) {
+      return reply.code(404).send({ error: "evidence_not_found", id });
+    }
+
+    return capture;
+  });
+
+  app.post("/foundry/evidence/:id/crash-test", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const parsed = CreateAgentCrashTestInputSchema.safeParse(request.body ?? {});
+
+    if (!parsed.success) {
+      return reply.code(400).send({
+        error: "invalid_evidence_crash_test_input",
+        issues: parsed.error.issues
+      });
+    }
+
+    return reply.code(201).send(
+      EvidenceCrashTestResponseSchema.parse(
+        createEvidenceCrashTest(id, parsed.data.scenarioPackId)
+      )
+    );
   });
 
   app.get("/agents", async () => listFoundryAgents());

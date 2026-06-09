@@ -3,9 +3,9 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
-  background: #121417;
-  color: #f4f7fb;
+  color-scheme: light;
+  background: #f6f8fb;
+  color: #111827;
 }
 
 * {
@@ -20,14 +20,9 @@ body {
   min-height: 100vh;
   margin: 0;
   background:
-    linear-gradient(rgba(13, 22, 29, 0.82), rgba(13, 22, 29, 0.94)),
-    url("/brand/crash-lab-hero.png"),
-    radial-gradient(circle at top left, rgba(0, 166, 166, 0.18), transparent 34rem),
-    linear-gradient(135deg, #0b1117 0%, #18202a 52%, #111820 100%);
-  background-attachment: fixed, fixed, fixed, fixed;
-  background-position: center top, center top, top left, center;
-  background-size: cover, cover, auto, cover;
-  color: #f4f7fb;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(246, 248, 251, 0.96)),
+    #f6f8fb;
+  color: #111827;
   font-family:
     Inter,
     ui-sans-serif,
@@ -45,6 +40,16 @@ a {
 
 button:focus-visible,
 a:focus-visible {
-  outline: 3px solid rgba(0, 166, 166, 0.9);
+  outline: 3px solid rgba(15, 108, 189, 0.9);
   outline-offset: 3px;
+}
+
+pre,
+code {
+  font-family:
+    "Cascadia Code",
+    "SFMono-Regular",
+    Consolas,
+    "Liberation Mono",
+    monospace;
 }

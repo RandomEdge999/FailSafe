@@ -2,6 +2,8 @@ import {
   FixtureReplayResultSchema,
   FoundryAgentImportSchema,
   FoundryReadinessResultSchema,
+  EvidenceCrashTestResponseSchema,
+  AgentEvidenceCaptureSchema,
   AgentTrustBoundaryMapSchema,
   PatchCoachPlanSchema,
   RegressionArtifactSchema,
@@ -12,6 +14,8 @@ import {
   type FixtureReplayResult,
   type FoundryAgentImport,
   type FoundryReadinessResult,
+  type EvidenceCrashTestResponse,
+  type AgentEvidenceCapture,
   type AgentTrustBoundaryMap,
   type PatchCoachPlan,
   type RegressionArtifact,
@@ -20,6 +24,7 @@ import {
   type SandboxReplayPlan,
   type ScenarioRun
 } from "@failsafe/schemas";
+import { sampleAgentEvidence } from "../apps/orchestrator-api/src/data/sample-agent-evidence";
 
 const apiBaseUrl =
   process.env.FAILSAFE_API_BASE_URL?.replace(/\/$/, "") ??
@@ -52,6 +57,10 @@ Usage:
   pnpm failsafe foundry --help
   pnpm failsafe foundry readiness
   pnpm failsafe foundry import-sample
+  pnpm failsafe evidence --help
+  pnpm failsafe evidence import-sample
+  pnpm failsafe evidence list
+  pnpm failsafe evidence crash-test <evidence-id> [scenario-pack-id]
   pnpm failsafe agents
   pnpm failsafe agent --help
   pnpm failsafe agent trust-map <agent-id>
@@ -76,6 +85,21 @@ Limitations:
   Runs, regressions, reviewed fixture replay results, and Safety Cards are
   stored in the local app-owned .failsafe-data folder. Start the API with
   \`pnpm dev:api\` before running commands that call endpoints.`);
+}
+
+function printEvidenceHelp() {
+  console.log(`FailSafe recorded agent evidence
+
+Usage:
+  pnpm failsafe evidence import-sample
+  pnpm failsafe evidence list
+  pnpm failsafe evidence crash-test <evidence-id> [scenario-pack-id]
+
+Behavior:
+  Imports reviewed JSON-body evidence, lists local captures, or runs a local
+  crash test over recorded evidence. No client paths, URLs, shell commands,
+  credentials, live Foundry calls, live tools, MCP servers, model calls, email,
+  databases, or external systems are accepted or executed.`);
 }
 
 function printFoundryHelp() {
@@ -241,6 +265,93 @@ function printFoundryAgent(agent: FoundryAgentImport) {
   );
 }
 
+function printEvidenceCapture(capture: AgentEvidenceCapture) {
+  console.log(
+    [
+      `- ${capture.id}`,
+      `agent="${capture.agentName}"`,
+      `mode=recorded_agent_evidence`,
+      `review=${capture.review.status}`,
+      `messages=${capture.messages.length}`,
+      `tools=${capture.toolIntents.length}`,
+      `imported=${capture.importedAt}`
+    ].join(" | ")
+  );
+}
+
+async function importEvidenceSampleCommand() {
+  const capture = await requestJson(
+    "/foundry/evidence/import",
+    (value) => AgentEvidenceCaptureSchema.parse(value),
+    {
+      body: JSON.stringify(sampleAgentEvidence),
+      method: "POST"
+    }
+  );
+
+  console.log("FailSafe reviewed recorded evidence imported");
+  console.log(`API base URL: ${apiBaseUrl}`);
+  printEvidenceCapture(capture);
+  console.log(
+    "Recorded evidence import only: no credentials, paths, URLs, network calls, live tools, MCP execution, shell commands, arbitrary files, email, or databases were used."
+  );
+}
+
+async function listEvidenceCommand() {
+  const captures = await requestJson("/foundry/evidence", (value) =>
+    AgentEvidenceCaptureSchema.array().parse(value)
+  );
+
+  if (captures.length === 0) {
+    console.log(
+      "No recorded agent evidence imported. Run `pnpm failsafe evidence import-sample`."
+    );
+    return;
+  }
+
+  console.log(`FailSafe recorded evidence captures from ${apiBaseUrl}:`);
+
+  for (const capture of captures) {
+    printEvidenceCapture(capture);
+  }
+}
+
+function printEvidenceCrashTest(response: EvidenceCrashTestResponse) {
+  console.log("FailSafe recorded evidence crash test complete");
+  console.log(`API base URL: ${apiBaseUrl}`);
+  console.log(`Evidence ID: ${response.result.evidenceId}`);
+  console.log(`Run ID: ${response.run.id}`);
+  console.log(`Mode: ${response.result.mode}`);
+  console.log(`Status: ${response.run.status}`);
+  console.log(`Scenario pack ID: ${response.run.scenarioPackId}`);
+  console.log(`Score: ${response.run.score.overall}`);
+  console.log(`Finding count: ${response.run.findings.length}`);
+  console.log(`Trace event count: ${response.run.trace.length}`);
+  console.log(`Safety: ${response.result.safetyStatement}`);
+}
+
+async function evidenceCrashTestCommand(
+  evidenceId: string | undefined,
+  scenarioPackId: string | undefined
+) {
+  if (!evidenceId) {
+    throw new CliError(
+      "Missing evidence ID. Run `pnpm failsafe evidence --help` for usage."
+    );
+  }
+
+  const response = await requestJson(
+    `/foundry/evidence/${encodeURIComponent(evidenceId)}/crash-test`,
+    (value) => EvidenceCrashTestResponseSchema.parse(value),
+    {
+      body: JSON.stringify({ scenarioPackId }),
+      method: "POST"
+    }
+  );
+
+  printEvidenceCrashTest(response);
+}
+
 async function importFoundrySampleCommand() {
   const agent = await requestJson(
     "/foundry/manifest/import",
@@ -352,7 +463,7 @@ async function listRegressions() {
 
   if (regressions.length === 0) {
     console.log(
-      "No local mock regressions found. Create one in the Studio or through `POST /regressions/mock`."
+      "No local Sample Lab regressions found. Create one in the Studio or through the compatibility `POST /regressions/mock` route."
     );
     return;
   }
@@ -466,7 +577,7 @@ async function replayRegression(regressionId: string | undefined) {
   console.log(`Finding count: ${replayRun.findings.length}`);
   console.log(`Trace event count: ${replayRun.trace.length}`);
   console.log(
-    "Mock replay only: no tools, shell commands, files, live LLMs, MCP servers, Copilot, email, databases, or external systems were executed."
+    "Sample Lab replay only: no tools, shell commands, files, live LLMs, MCP servers, Copilot, email, databases, or external systems were executed."
   );
 }
 
@@ -721,7 +832,7 @@ async function resetDemoDataCommand() {
     }
   );
 
-  console.log("FailSafe local demo data reset");
+  console.log("FailSafe local evidence reset");
   console.log(`API base URL: ${apiBaseUrl}`);
   console.log(`Mode: ${reset.mode}`);
   console.log(`Reset: ${formatList(reset.reset)}`);
@@ -775,6 +886,34 @@ async function main() {
 
     throw new CliError(
       `Unknown foundry command: ${subcommand}. Run \`pnpm failsafe foundry --help\`.`
+    );
+  }
+
+  if (command === "evidence") {
+    const [subcommand, evidenceId, scenarioPackId] = args;
+
+    if (!subcommand || subcommand === "--help" || subcommand === "-h") {
+      printEvidenceHelp();
+      return;
+    }
+
+    if (subcommand === "import-sample") {
+      await importEvidenceSampleCommand();
+      return;
+    }
+
+    if (subcommand === "list") {
+      await listEvidenceCommand();
+      return;
+    }
+
+    if (subcommand === "crash-test") {
+      await evidenceCrashTestCommand(evidenceId, scenarioPackId);
+      return;
+    }
+
+    throw new CliError(
+      `Unknown evidence command: ${subcommand}. Run \`pnpm failsafe evidence --help\`.`
     );
   }
 
@@ -896,12 +1035,16 @@ async function main() {
   throw new CliError(`Unknown command: ${command}. Run \`pnpm failsafe --help\`.`);
 }
 
-main().catch((error: unknown) => {
-  if (error instanceof CliError) {
-    console.error(error.message);
-    process.exitCode = error.exitCode;
-  } else {
-    console.error(error);
-    process.exitCode = 1;
-  }
-});
+main()
+  .then(() => {
+    setImmediate(() => process.exit(0));
+  })
+  .catch((error: unknown) => {
+    if (error instanceof CliError) {
+      console.error(error.message);
+      setImmediate(() => process.exit(error.exitCode));
+    } else {
+      console.error(error);
+      setImmediate(() => process.exit(1));
+    }
+  });

@@ -1,5 +1,6 @@
 export * from "./agent-target";
 export * from "./comparison";
+export * from "./evidence";
 export * from "./execution";
 export * from "./finding";
 export * from "./fixture-replay";

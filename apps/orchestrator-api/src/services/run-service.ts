@@ -10,6 +10,7 @@ import {
   ScenarioRunSchema,
   type CreateMockRunInput,
   type FixtureReplayResult,
+  type Project,
   type RegressionArtifact,
   type ReplayComparison,
   type SandboxReplayPlan,
@@ -142,6 +143,10 @@ function materializeRun(record: RuntimeRunRecord): ScenarioRun {
   }
 
   if (record.lifecycle === "fixture_replay") {
+    return record.run;
+  }
+
+  if (record.lifecycle === "recorded_evidence") {
     return record.run;
   }
 
@@ -321,7 +326,8 @@ export function createMockReplayRun(regression: RegressionArtifact) {
 
 export function createFixtureReplayRun(
   regression: RegressionArtifact,
-  plan: SandboxReplayPlan
+  plan: SandboxReplayPlan,
+  replayProject?: Project
 ): FixtureReplayResult {
   const baselineRun = getRunById(regression.runId);
 
@@ -333,7 +339,8 @@ export function createFixtureReplayRun(
     );
   }
 
-  const project = mockProjects.find((item) => item.id === regression.projectId);
+  const project =
+    replayProject ?? mockProjects.find((item) => item.id === regression.projectId);
 
   if (!project) {
     throw requestError(

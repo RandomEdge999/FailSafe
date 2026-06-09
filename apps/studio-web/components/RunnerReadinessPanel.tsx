@@ -86,7 +86,7 @@ export function RunnerReadinessPanel() {
         <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
           <dt className="text-slate-400">Allowed current mode</dt>
           <dd className="text-right font-semibold text-white">
-            mock + dry_run policy preview
+            Sample Lab + dry_run policy preview
           </dd>
         </div>
         {runnerRows.map((row) => {

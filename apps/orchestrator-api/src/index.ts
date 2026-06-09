@@ -62,6 +62,10 @@ const isMainModule =
   resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isMainModule) {
+  void startServer();
+}
+
+async function startServer() {
   const app = await buildServer();
   const port = Number(process.env.ORCHESTRATOR_API_PORT ?? 4000);
 

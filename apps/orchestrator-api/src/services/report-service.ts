@@ -105,8 +105,36 @@ export function createSafetyReportForRun(
   const title = `FailSafe Safety Card - ${project.name}`;
   const fixtureOnly =
     run.id.startsWith("run-fixture-") || run.id.startsWith("run-foundry-fixture");
+  const evidenceCaptureId = run.trace
+    .map((event) => event.metadata.evidenceId)
+    .find((value): value is string => typeof value === "string");
+  const manifestId = run.trace
+    .map((event) => {
+      if (
+        typeof event.raw === "object" &&
+        event.raw !== null &&
+        "manifestId" in event.raw &&
+        typeof event.raw.manifestId === "string"
+      ) {
+        return event.raw.manifestId;
+      }
+
+      return undefined;
+    })
+    .find((value): value is string => typeof value === "string");
+  const evidenceMode = evidenceCaptureId
+    ? "recorded_agent_evidence"
+    : run.id.startsWith("run-foundry-fixture")
+      ? "reviewed_fixture_replay"
+      : run.id.startsWith("run-foundry")
+        ? "foundry_manifest"
+        : run.id.startsWith("run-fixture-")
+          ? "reviewed_fixture_replay"
+          : "sample_lab_fallback";
   const mode = run.id.startsWith("run-foundry-fixture")
     ? "Foundry fixture replay"
+    : evidenceCaptureId
+      ? "Recorded agent evidence"
     : run.id.startsWith("run-foundry")
       ? "Foundry manifest crash test"
       : run.baselineRunId
@@ -137,6 +165,9 @@ Status: ${run.status}
 Score: ${run.score.overall} / 100
 Regression: ${regression?.id ?? "not attached"}
 Mode: ${mode}
+Evidence mode: ${evidenceMode}
+Manifest ID: ${manifestId ?? "not attached"}
+Evidence capture ID: ${evidenceCaptureId ?? "not attached"}
 
 ${run.findings.length === 0 ? "The selected replay has no open findings. It remains reviewed local fixture evidence, not proof of production safety." : `FailSafe found ${run.findings.length} open finding(s) in this defensive crash test.`}
 
@@ -165,6 +196,14 @@ ${markdownList(
 
 ${markdownList(safetyBoundaries)}
 
+## Human Review
+
+${markdownList([
+  "All live tool, MCP, model, shell, network, file, email, and database actions remain disabled.",
+  "Patch Coach output requires human review before any code or policy change.",
+  "Recorded evidence imports require reviewer metadata and reject paths, URLs, commands, and high-confidence secrets."
+])}
+
 ## Limitations
 
 ${markdownList(limitations)}
@@ -182,6 +221,10 @@ ${markdownList(limitations)}
     content,
     summary:
       "Local Safety Card generated from typed FailSafe run evidence and written to the app-owned store.",
+    evidenceMode,
+    manifestId,
+    evidenceCaptureId,
+    localEvidenceOnly: true,
     mockOnly: true,
     fixtureOnly,
     safetyBoundaries,

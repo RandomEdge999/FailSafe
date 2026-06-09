@@ -51,7 +51,7 @@ export function ReportPanel({
           type="button"
           disabled={!currentRun || isCreating}
           onClick={onCreateReport}
-          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-white/15 bg-white/8 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-white/15 bg-white/[0.08] px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
         >
           {isCreating ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -64,14 +64,14 @@ export function ReportPanel({
           type="button"
           disabled={isResetting}
           onClick={onResetDemoData}
-          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-white/15 bg-white/8 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-white/15 bg-white/[0.08] px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
         >
           {isResetting ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           ) : (
             <RotateCcw className="h-4 w-4" aria-hidden="true" />
           )}
-          {isResetting ? "Resetting..." : "Reset Demo Data"}
+          {isResetting ? "Resetting..." : "Reset Local Evidence"}
         </button>
       </div>
 

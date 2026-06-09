@@ -43,7 +43,7 @@ function buildPromptPayload(
   return JSON.stringify(
     {
       recommendedPromptFile: ".github/prompts/patch-guardrail.prompt.md",
-      productMode: "PRD-grade local crash-test studio",
+      productMode: "local evidence crash-test studio",
       selectedScenarioPack: scenarioPack?.id,
       selectedFinding: {
         id: finding.id,
@@ -58,10 +58,10 @@ function buildPromptPayload(
       traceEvidenceSummary: evidence,
       allowedMitigationPatterns: safeMitigationPatterns,
       hardConstraints: [
-        "Keep dangerous actions mocked.",
+        "Keep dangerous actions blocked or represented as reviewed local evidence.",
         "Do not add live external targets.",
         "Do not execute file, shell, network, email, or database actions from the UI.",
-        "Add or update regression coverage for this synthetic failure."
+        "Add or update regression coverage for this local evidence failure."
       ]
     },
     null,
@@ -201,9 +201,10 @@ export function CopilotPromptPanel({
             <p className="text-sm font-semibold text-warning">
               No live code patch is executed from the UI.
             </p>
-            <p className="mt-2 text-sm leading-6 text-slate-300">
-              The workflow is a visible, mock Copilot handoff only. A developer
-              still reviews and applies any future patch.
+          <p className="mt-2 text-sm leading-6 text-slate-300">
+              The workflow is a visible prompt handoff only. A developer still
+              reviews and applies any future patch, and submitters disclose any
+              real Copilot usage in their final entry.
             </p>
           </div>
         </div>

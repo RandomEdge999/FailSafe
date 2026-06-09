@@ -13,11 +13,16 @@
     "typecheck": "pnpm -r typecheck",
     "dev:check": "tsx scripts/dev-check.ts",
     "check": "pnpm dev:check && pnpm typecheck",
+    "release:check": "tsx scripts/release-check.ts",
+    "smoke:api": "tsx scripts/api-smoke.ts",
+    "smoke:cli": "tsx scripts/cli-smoke.ts",
+    "smoke:studio": "tsx scripts/studio-smoke.ts",
     "test": "pnpm check"
   },
   "devDependencies": {
     "@failsafe/scenario-engine": "workspace:*",
     "@failsafe/schemas": "workspace:*",
+    "@playwright/test": "^1.60.0",
     "@types/node": "^22.10.5",
     "concurrently": "^9.1.2",
     "tsx": "^4.19.2",

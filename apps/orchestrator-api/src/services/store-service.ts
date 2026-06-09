@@ -1,11 +1,13 @@
 import {
   FixtureReplayResultSchema,
+  AgentEvidenceCaptureSchema,
   FoundryAgentImportSchema,
   RegressionArtifactSchema,
   SafetyReportSchema,
   SandboxReplayPlanSchema,
   ScenarioRunSchema,
   type FixtureReplayResult,
+  type AgentEvidenceCapture,
   type FoundryAgentImport,
   type RegressionArtifact,
   type SafetyReport,
@@ -33,7 +35,12 @@ const storePath = resolve(storeDir, "store.json");
 
 export type StoredRunRecord = {
   createdAtMs: number;
-  lifecycle: "mock" | "fixture_replay" | "foundry_manifest" | "foundry_connected";
+  lifecycle:
+    | "mock"
+    | "fixture_replay"
+    | "foundry_manifest"
+    | "foundry_connected"
+    | "recorded_evidence";
   run: ScenarioRun;
   seed: string;
   scenarioVersion: string;
@@ -48,6 +55,7 @@ export type PersistedStore = {
   fixtureReplayResults: FixtureReplayResult[];
   reports: SafetyReport[];
   foundryImports: FoundryAgentImport[];
+  evidenceCaptures: AgentEvidenceCapture[];
 };
 
 export const failsafeStorePaths = {
@@ -67,7 +75,8 @@ function emptyStore(): PersistedStore {
     sandboxPlans: [],
     fixtureReplayResults: [],
     reports: [],
-    foundryImports: []
+    foundryImports: [],
+    evidenceCaptures: []
   };
 }
 
@@ -86,7 +95,8 @@ function parseRunRecord(value: unknown): StoredRunRecord {
     lifecycle !== "mock" &&
     lifecycle !== "fixture_replay" &&
     lifecycle !== "foundry_manifest" &&
-    lifecycle !== "foundry_connected"
+    lifecycle !== "foundry_connected" &&
+    lifecycle !== "recorded_evidence"
   ) {
     throw new Error(`Unsupported persisted run lifecycle: ${String(lifecycle)}.`);
   }
@@ -141,6 +151,9 @@ function parseStore(value: unknown): PersistedStore {
       : [],
     foundryImports: Array.isArray(value.foundryImports)
       ? FoundryAgentImportSchema.array().parse(value.foundryImports)
+      : [],
+    evidenceCaptures: Array.isArray(value.evidenceCaptures)
+      ? AgentEvidenceCaptureSchema.array().parse(value.evidenceCaptures)
       : []
   };
 }
@@ -202,6 +215,10 @@ export function persistReports(reports: SafetyReport[]) {
 
 export function persistFoundryImports(imports: FoundryAgentImport[]) {
   updatePersistedStore((store) => ({ ...store, foundryImports: imports }));
+}
+
+export function persistEvidenceCaptures(evidenceCaptures: AgentEvidenceCapture[]) {
+  updatePersistedStore((store) => ({ ...store, evidenceCaptures }));
 }
 
 export function resetPersistedStore() {

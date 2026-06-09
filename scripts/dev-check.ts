@@ -23,7 +23,10 @@ import {
   FoundryAgentImportSchema,
   FoundryAgentManifestSchema,
   FoundryReadinessResultSchema,
+  AgentEvidenceCaptureSchema,
   AgentTrustBoundaryMapSchema,
+  EvidenceCrashTestResponseSchema,
+  ImportAgentEvidenceInputSchema,
   PatchCoachPlanSchema,
   SafetyReportSchema,
   SandboxReplayPlanSchema,
@@ -36,6 +39,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { mockProjects } from "../apps/orchestrator-api/src/data/mock-projects";
 import { mockRuns } from "../apps/orchestrator-api/src/data/mock-runs";
+import { sampleAgentEvidence } from "../apps/orchestrator-api/src/data/sample-agent-evidence";
 import { sampleFoundryManifest } from "../apps/orchestrator-api/src/data/sample-foundry-manifest";
 
 const parsedPacks = ScenarioPackSchema.array().parse(starterAttackPacks);
@@ -592,6 +596,44 @@ if (foundryReadiness.configured) {
   throw new Error("Dev-check Foundry readiness should default to manifest-only.");
 }
 
+const evidenceInput = ImportAgentEvidenceInputSchema.parse(sampleAgentEvidence);
+const evidenceCapture = AgentEvidenceCaptureSchema.parse({
+  id: "evidence-dev-check",
+  importedAt: "2026-06-09T00:03:00.000Z",
+  source: "json_body",
+  agentName: evidenceInput.agentName,
+  manifestId: evidenceInput.manifestId,
+  projectId: "project-evidence-dev-check",
+  agentTargetId: "target-evidence-dev-check",
+  scenarioPackId: evidenceInput.scenarioPackId ?? "pack-tool-poisoning",
+  model: evidenceInput.model,
+  summary: evidenceInput.summary,
+  messages: evidenceInput.messages,
+  toolIntents: evidenceInput.toolIntents,
+  review: evidenceInput.review,
+  redactionCount: 0,
+  rejectedInputReasons: [],
+  safetyStatement:
+    "Dev check recorded evidence uses a JSON body only and performs no live actions."
+});
+
+EvidenceCrashTestResponseSchema.parse({
+  run: demoRun,
+  result: {
+    evidenceId: evidenceCapture.id,
+    mode: "recorded_agent_evidence",
+    scenarioPackId: evidenceCapture.scenarioPackId,
+    findingCategories: demoRun.findings.map((finding) => finding.category),
+    runId: demoRun.id,
+    safetyStatement:
+      "Recorded evidence crash-test schema validation only; no live actions."
+  }
+});
+
+if (evidenceCapture.review.status !== "reviewed") {
+  throw new Error("Sample recorded evidence should be reviewed.");
+}
+
 const requiredReadinessFiles = [
   ".github/workflows/ci.yml",
   ".github/copilot-instructions.md",
@@ -609,10 +651,19 @@ const requiredReadinessFiles = [
   "docs/assets/screenshots/patch-coach.png",
   "docs/assets/screenshots/fixture-replay-comparison.png",
   "docs/assets/screenshots/safety-card.png",
+  "docs/assets/screenshots/foundry-operations.png",
+  "docs/assets/screenshots/agent-trust-map.png",
+  "docs/assets/screenshots/evidence-readiness.png",
+  "docs/assets/screenshots/crash-test-result.png",
   "docs/assets/brand/failsafe-logo.png",
   "docs/assets/brand/crash-lab-hero.png",
   "apps/studio-web/public/brand/failsafe-logo.png",
   "apps/studio-web/public/brand/crash-lab-hero.png",
+  "scripts/release-check.ts",
+  "scripts/api-smoke.ts",
+  "scripts/cli-smoke.ts",
+  "scripts/studio-smoke.ts",
+  "docs/submission-checklist.md",
   "LICENSE"
 ];
 
@@ -642,11 +693,12 @@ function assertFileOmits(filePath: string, forbiddenText: string) {
   }
 }
 
-assertFileIncludes("README.md", "## How GitHub Copilot Was Used");
-assertFileIncludes("README.md", "## Demo Assets");
-assertFileIncludes("README.md", "## GitHub Readiness");
-assertFileIncludes("README.md", "## Safety Boundaries");
-assertFileIncludes("README.md", "## Known Limitations");
+assertFileIncludes("README.md", "## AI assistance disclosure");
+assertFileIncludes("README.md", "## Screenshots");
+assertFileIncludes("README.md", "## Safety boundaries");
+assertFileIncludes("README.md", "## Known intentional limits");
+assertFileIncludes("README.md", "recorded agent evidence");
+assertFileIncludes("README.md", "Microsoft Agents League");
 assertFileIncludes(
   "README.md",
   "docs/assets/screenshots/fixture-replay-comparison.png"
@@ -736,6 +788,14 @@ const agentHelp = execFileSync(
     stdio: ["ignore", "pipe", "pipe"]
   }
 );
+const evidenceHelp = execFileSync(
+  process.execPath,
+  [tsxCliPath, "scripts/failsafe.ts", "evidence", "--help"],
+  {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  }
+);
 
 if (!rootHelp.includes("FailSafe local CLI")) {
   throw new Error("FailSafe CLI root help did not render expected text.");
@@ -759,6 +819,10 @@ if (!foundryHelp.includes("FailSafe Microsoft Foundry adapter")) {
 
 if (!agentHelp.includes("FailSafe agent crash testing")) {
   throw new Error("FailSafe CLI agent help did not render expected text.");
+}
+
+if (!evidenceHelp.includes("FailSafe recorded agent evidence")) {
+  throw new Error("FailSafe CLI evidence help did not render expected text.");
 }
 
 if (!rootHelp.includes("reset-demo-data")) {

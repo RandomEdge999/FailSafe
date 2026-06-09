@@ -274,8 +274,18 @@ export function replayFixtureRegression(id: string): FixtureReplayResult {
 
   const plan =
     sandboxPlans.get(regression.id) ?? createSandboxPlanForRegression(id);
+  const project = getProjectById(regression.projectId);
+
+  if (!project) {
+    throw requestError(
+      `Project ${regression.projectId} was not found.`,
+      "project_not_found",
+      404
+    );
+  }
+
   const result = FixtureReplayResultSchema.parse(
-    createFixtureReplayRun(regression, plan)
+    createFixtureReplayRun(regression, plan, project)
   );
 
   fixtureReplayResults.set(regression.id, result);

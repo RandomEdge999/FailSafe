@@ -1,4 +1,5 @@
 import { resetPersistedStore } from "./store-service";
+import { resetEvidenceState } from "./evidence-service";
 import { resetFoundryImports } from "./foundry-service";
 import { resetRegressionState } from "./regression-service";
 import { resetReportState } from "./report-service";
@@ -10,6 +11,7 @@ export function resetDemoData() {
   resetRegressionState();
   resetReportState();
   resetFoundryImports();
+  resetEvidenceState();
 
   return {
     ok: true,
@@ -20,7 +22,8 @@ export function resetDemoData() {
       "sandboxPlans",
       "fixtureReplayResults",
       "reports",
-      "foundryImports"
+      "foundryImports",
+      "evidenceCaptures"
     ],
     preserved: ["seed projects", "seed scenarios", "seed run"],
     safety:

@@ -13,11 +13,15 @@ export function RiskInspector({
   run
 }: RiskInspectorProps) {
   const findingCount = run?.findings.length ?? 0;
-  const mode = run?.id.startsWith("run-fixture-")
-    ? "fixture replay"
-    : run?.baselineRunId
-      ? "mock replay"
-      : "mock";
+  const mode = run?.id.startsWith("run-evidence-")
+    ? "recorded evidence"
+    : run?.id.startsWith("run-agent-")
+      ? "Foundry manifest"
+      : run?.id.startsWith("run-fixture-")
+        ? "reviewed fixture replay"
+        : run?.baselineRunId
+          ? "Sample Lab replay"
+          : "Sample Lab";
 
   return (
     <aside className="rounded-lg border border-white/10 bg-panel p-4 shadow-lab">

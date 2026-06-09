@@ -85,7 +85,7 @@ export function RegressionPanel({
                       type="button"
                       disabled={!regression.mockReplayable || isReplaying}
                       onClick={() => onReplayMock(regression)}
-                      className="inline-flex min-h-9 items-center gap-2 rounded-md border border-white/15 bg-white/8 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
+                      className="inline-flex min-h-9 items-center gap-2 rounded-md border border-white/15 bg-white/[0.08] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
                     >
                       {isReplaying ? (
                         <Loader2
@@ -98,7 +98,7 @@ export function RegressionPanel({
                           aria-hidden="true"
                         />
                       )}
-                      {isReplaying ? "Replaying..." : "Replay Mock"}
+                      {isReplaying ? "Replaying..." : "Replay Sample Lab"}
                     </button>
                     <button
                       type="button"
@@ -128,7 +128,7 @@ export function RegressionPanel({
                 </p>
                 <div className="mt-3 rounded bg-black/30 p-3">
                   <p className="text-xs font-semibold uppercase text-slate-400">
-                    Mock replay endpoint
+                    Compatibility replay endpoint
                   </p>
                   <code className="mt-1 block break-words text-xs text-signal">
                     {regression.replayCommand}
@@ -154,7 +154,7 @@ export function RegressionPanel({
                     </dd>
                   </div>
                   <div className="flex justify-between gap-3">
-                    <dt>Replayable</dt>
+                    <dt>Sample Lab replay</dt>
                     <dd className="font-semibold text-white">
                       {regression.mockReplayable ? "yes" : "no"}
                     </dd>

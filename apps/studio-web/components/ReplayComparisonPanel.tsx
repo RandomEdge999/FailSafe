@@ -13,11 +13,15 @@ type ReplayComparisonPanelProps = {
 };
 
 function formatDelta(value: number) {
+  const rounded = Number.isInteger(value)
+    ? String(value)
+    : value.toFixed(1).replace(/\.0$/, "");
+
   if (value > 0) {
-    return `+${value}`;
+    return `+${rounded}`;
   }
 
-  return String(value);
+  return rounded;
 }
 
 function formatType(value: string) {
@@ -86,7 +90,7 @@ export function ReplayComparisonPanel({
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase text-signal">
-            Mock deterministic replay
+            Sample Lab replay evidence
           </p>
           <h2 className="text-lg font-semibold text-white">
             Baseline vs replay
