@@ -1,11 +1,14 @@
 import { starterAttackPacks } from "@failsafe/attack-packs";
 import {
+  FIXTURE_REPLAY_VERSION,
   MOCK_SCENARIO_VERSION,
   compareMockReplayRuns,
+  createPatchCoachPlan,
   createReviewedSandboxReplayPlan,
   deriveMockScenarioSeed,
   dryRunRunnerCapabilityManifest,
   executeMockScenario,
+  executeReviewedFixtureReplay,
   findMockScenarioSafetyIssues,
   previewDryRunRunner
 } from "@failsafe/scenario-engine";
@@ -16,6 +19,9 @@ import {
   RunnerActionSchema,
   RunnerCapabilityManifestSchema,
   RunnerDryRunResultSchema,
+  FixtureReplayResultSchema,
+  PatchCoachPlanSchema,
+  SafetyReportSchema,
   SandboxReplayPlanSchema,
   SandboxReplayResultSchema,
   ScenarioPackSchema,
@@ -346,12 +352,16 @@ for (const capability of requiredSandboxBlocks) {
   }
 }
 
+if (!sandboxPlan.notImplementedCapabilities.includes("real_sandbox_execution")) {
+  throw new Error("Sandbox plan did not mark real sandbox as not implemented.");
+}
+
 if (
-  !sandboxPlan.notImplementedCapabilities.includes("real_sandbox_execution") ||
-  !sandboxPlan.notImplementedCapabilities.includes("fixture_replay_executor")
+  sandboxPlan.notImplementedCapabilities.includes("fixture_replay_executor") ||
+  sandboxPlan.notImplementedCapabilities.includes("persistent_regression_store")
 ) {
   throw new Error(
-    "Sandbox plan did not mark real sandbox and fixture executor paths as not implemented."
+    "Sandbox plan still marks fixture replay or local persistence as not implemented."
   );
 }
 
@@ -370,6 +380,122 @@ SandboxReplayResultSchema.parse({
   fixtureOnly: true,
   completedAt: sandboxPlan.createdAt,
   safetyNotes: [sandboxPlan.safetyStatement]
+});
+
+const fixtureReplay = FixtureReplayResultSchema.parse(
+  executeReviewedFixtureReplay({
+    regression,
+    baselineRun: demoRun,
+    scenarioPack,
+    project,
+    agentTarget,
+    plan: sandboxPlan,
+    runId: "run-dev-check-fixture-replay",
+    startedAt: "2026-06-05T07:30:00.000Z"
+  })
+);
+const fixtureReplaySafetyIssues = findMockScenarioSafetyIssues(
+  fixtureReplay.replayRun
+);
+
+if (fixtureReplay.replayRun.status !== "passed") {
+  throw new Error("Fixture replay did not create a passed replay run.");
+}
+
+if (fixtureReplay.replayRun.findings.length !== 0) {
+  throw new Error("Fixture replay should produce no open findings.");
+}
+
+if (fixtureReplay.replayRun.baselineRunId !== demoRun.id) {
+  throw new Error("Fixture replay did not preserve baseline run linkage.");
+}
+
+if (fixtureReplaySafetyIssues.length > 0) {
+  throw new Error(
+    `Fixture replay safety check failed: ${fixtureReplaySafetyIssues.join(", ")}`
+  );
+}
+
+if (
+  fixtureReplay.comparison.expectedFindingCategoriesPreserved ||
+  fixtureReplay.comparison.scoreDelta <= 0
+) {
+  throw new Error(
+    "Fixture replay comparison did not show the expected synthetic improvement."
+  );
+}
+
+if (
+  fixtureReplay.blockedCapabilities.includes("persistence_write") ||
+  !fixtureReplay.blockedCapabilities.includes("shell_command")
+) {
+  throw new Error(
+    "Fixture replay blocked capabilities were not scoped to arbitrary execution boundaries."
+  );
+}
+
+if (fixtureReplay.replayRun.trace.length < 5) {
+  throw new Error("Fixture replay did not produce enough trace evidence.");
+}
+
+if (
+  fixtureReplay.replayRun.trace.some((event) =>
+    JSON.stringify(event).includes("http://")
+  )
+) {
+  throw new Error("Fixture replay emitted a live URL.");
+}
+
+if (
+  fixtureReplay.replayRun.trace.some((event) =>
+    JSON.stringify(event).includes("https://")
+  )
+) {
+  throw new Error("Fixture replay emitted a live URL.");
+}
+
+if (fixtureReplay.replayRun.trace.some((event) => event.type === "policy_violation")) {
+  throw new Error("Fixture replay should not emit a policy violation event.");
+}
+
+if (fixtureReplay.replayRun.trace[0]?.metadata.fixtureReplayVersion !== FIXTURE_REPLAY_VERSION) {
+  throw new Error("Fixture replay did not stamp the expected engine version.");
+}
+
+const patchCoachPlan = PatchCoachPlanSchema.parse(
+  createPatchCoachPlan({
+    run: demoRun,
+    scenarioPack,
+    finding: demoRun.findings[0]!,
+    createdAt: "2026-06-05T07:40:00.000Z"
+  })
+);
+
+if (patchCoachPlan.liveCopilotInvocation !== false) {
+  throw new Error("Patch Coach attempted to mark live Copilot invocation.");
+}
+
+if (patchCoachPlan.copilotPrompts.length < 3) {
+  throw new Error("Patch Coach did not generate the expected prompt payloads.");
+}
+
+SafetyReportSchema.parse({
+  id: "report-dev-check",
+  runId: fixtureReplay.replayRun.id,
+  projectId: fixtureReplay.replayRun.projectId,
+  scenarioPackId: fixtureReplay.replayRun.scenarioPackId,
+  createdAt: "2026-06-05T07:50:00.000Z",
+  title: "FailSafe Safety Card - Dev Check",
+  format: "markdown",
+  appOwnedPath: ".failsafe-data/reports/report-dev-check.md",
+  content: "# FailSafe Safety Card\n\nSynthetic dev-check report.",
+  summary: "Synthetic report schema validation.",
+  mockOnly: true,
+  fixtureOnly: true,
+  safetyBoundaries: [
+    "No tools, shell commands, arbitrary files, network, MCP, model, email, database, or live target actions."
+  ],
+  limitations: ["Not a security certification."]
 });
 
 const requireFromDevCheck = createRequire(import.meta.url);
@@ -423,6 +549,14 @@ if (!sandboxHelp.includes("FailSafe reviewed sandbox plan")) {
   throw new Error("FailSafe CLI sandbox help did not render expected text.");
 }
 
+if (!rootHelp.includes("reset-demo-data")) {
+  throw new Error("FailSafe CLI root help did not include reset-demo-data.");
+}
+
+if (!sandboxHelp.includes("fixture-replay")) {
+  throw new Error("FailSafe CLI sandbox help did not include fixture replay.");
+}
+
 console.log(
-  `FailSafe dev check passed: ${parsedPacks.length} packs, ${parsedRuns.length} seeded run, ${engineRuns.length} deterministic engine runs, replay schema ok, comparison schema ok, runner dry-run policy ok, sandbox plan ok, CLI help ok, safety guardrails ok.`
+  `FailSafe dev check passed: ${parsedPacks.length} packs, ${parsedRuns.length} seeded run, ${engineRuns.length} deterministic engine runs, replay schema ok, fixture replay ok, Patch Coach ok, report schema ok, comparison schema ok, runner dry-run policy ok, sandbox plan ok, CLI help ok, safety guardrails ok.`
 );

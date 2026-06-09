@@ -2,10 +2,12 @@ import cors from "@fastify/cors";
 import Fastify from "fastify";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { registerDemoRoutes } from "./routes/demo";
 import { registerFindingRoutes } from "./routes/findings";
 import { registerHealthRoutes } from "./routes/health";
 import { registerProjectRoutes } from "./routes/projects";
 import { registerRegressionRoutes } from "./routes/regressions";
+import { registerReportRoutes } from "./routes/reports";
 import { registerRunnerRoutes } from "./routes/runner";
 import { registerRunRoutes } from "./routes/runs";
 import { registerScenarioRoutes } from "./routes/scenarios";
@@ -28,6 +30,8 @@ export async function buildServer() {
   await registerRunnerRoutes(app);
   await registerFindingRoutes(app);
   await registerRegressionRoutes(app);
+  await registerReportRoutes(app);
+  await registerDemoRoutes(app);
 
   app.setErrorHandler((error, _request, reply) => {
     const errorRecord =

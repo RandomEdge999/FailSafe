@@ -18,6 +18,12 @@ const runnerRows = [
     icon: Lock
   },
   {
+    label: "Fixture replay",
+    value: "synthetic only",
+    tone: "text-signal",
+    icon: ShieldCheck
+  },
+  {
     label: "File writes",
     value: "blocked",
     tone: "text-danger",

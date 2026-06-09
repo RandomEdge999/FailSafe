@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   Finding,
+  FixtureReplayResult,
+  PatchCoachPlan,
   Project,
   RegressionArtifact,
+  SafetyReport,
   SandboxReplayPlan,
   ScenarioPack,
   ScenarioRun,
@@ -20,13 +23,16 @@ import { FindingCard } from "./FindingCard";
 import { FindingDetailPanel } from "./FindingDetailPanel";
 import { RegressionPanel } from "./RegressionPanel";
 import { ReplayComparisonPanel } from "./ReplayComparisonPanel";
+import { ReportPanel } from "./ReportPanel";
 import { RiskInspector } from "./RiskInspector";
 import { RunnerReadinessPanel } from "./RunnerReadinessPanel";
 import { SafetyScoreCard } from "./SafetyScoreCard";
 import { SandboxPlanPanel } from "./SandboxPlanPanel";
 import { ScenarioLibrary } from "./ScenarioLibrary";
 import {
+  createPatchCoachPlan,
   createSandboxPlan,
+  createSafetyReport,
   createMockRun,
   getHealth,
   getRun,
@@ -35,7 +41,9 @@ import {
   listRegressions,
   listRuns,
   listScenarios,
+  replayFixtureRegression,
   replayMockRegression,
+  resetDemoData,
   saveRegression
 } from "../lib/api-client";
 
@@ -95,6 +103,12 @@ export function AppShell() {
   const [lastReplayedRegressionId, setLastReplayedRegressionId] = useState<
     string | undefined
   >();
+  const [lastFixtureReplayedRegressionId, setLastFixtureReplayedRegressionId] =
+    useState<string | undefined>();
+  const [fixtureReplayingRegressionId, setFixtureReplayingRegressionId] =
+    useState<string | undefined>();
+  const [fixtureReplayResult, setFixtureReplayResult] =
+    useState<FixtureReplayResult | null>(null);
   const [replayComparison, setReplayComparison] =
     useState<ReplayComparison | null>(null);
   const [isLoadingComparison, setIsLoadingComparison] = useState(false);
@@ -106,6 +120,15 @@ export function AppShell() {
     string | undefined
   >();
   const [sandboxPlanError, setSandboxPlanError] = useState<string | null>(null);
+  const [patchCoachPlan, setPatchCoachPlan] =
+    useState<PatchCoachPlan | null>(null);
+  const [isLoadingPatchCoach, setIsLoadingPatchCoach] = useState(false);
+  const [patchCoachError, setPatchCoachError] = useState<string | null>(null);
+  const [safetyReport, setSafetyReport] = useState<SafetyReport | null>(null);
+  const [isCreatingReport, setIsCreatingReport] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [isResettingDemoData, setIsResettingDemoData] = useState(false);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   const project = projects[0] ?? null;
   const selectedPack = useMemo(
@@ -229,6 +252,12 @@ export function AppShell() {
 
     setActionError(null);
     setShowCopilotPanel(false);
+    setPatchCoachPlan(null);
+    setPatchCoachError(null);
+    setSafetyReport(null);
+    setReportError(null);
+    setResetMessage(null);
+    setFixtureReplayResult(null);
     setReplayComparison(null);
     setComparisonError(null);
     setSandboxPlan(null);
@@ -257,12 +286,25 @@ export function AppShell() {
     }
   }
 
-  function handleFixWithCopilot() {
-    if (!selectedFinding) {
+  async function handleFixWithCopilot() {
+    if (!currentRun || !selectedFinding) {
       return;
     }
 
     setShowCopilotPanel(true);
+    setPatchCoachError(null);
+    setPatchCoachPlan(null);
+    setIsLoadingPatchCoach(true);
+
+    try {
+      setPatchCoachPlan(
+        await createPatchCoachPlan(currentRun.id, selectedFinding.id)
+      );
+    } catch (error) {
+      setPatchCoachError(formatError(error));
+    } finally {
+      setIsLoadingPatchCoach(false);
+    }
   }
 
   async function handleSaveRegression() {
@@ -300,8 +342,13 @@ export function AppShell() {
   async function handleReplayRegression(regression: RegressionArtifact) {
     setActionError(null);
     setShowCopilotPanel(false);
+    setPatchCoachPlan(null);
+    setPatchCoachError(null);
+    setSafetyReport(null);
+    setReportError(null);
     setReplayComparison(null);
     setComparisonError(null);
+    setFixtureReplayResult(null);
     setSandboxPlan(null);
     setSandboxPlanError(null);
     setReplayingRegressionId(regression.id);
@@ -325,6 +372,34 @@ export function AppShell() {
     }
   }
 
+  async function handleFixtureReplayRegression(regression: RegressionArtifact) {
+    setActionError(null);
+    setShowCopilotPanel(false);
+    setPatchCoachPlan(null);
+    setPatchCoachError(null);
+    setSafetyReport(null);
+    setReportError(null);
+    setReplayComparison(null);
+    setComparisonError(null);
+    setFixtureReplayResult(null);
+    setSandboxPlan(null);
+    setSandboxPlanError(null);
+    setFixtureReplayingRegressionId(regression.id);
+
+    try {
+      const result = await replayFixtureRegression(regression.id);
+
+      setFixtureReplayResult(result);
+      setReplayComparison(result.comparison);
+      applyRun(result.replayRun);
+      setLastFixtureReplayedRegressionId(regression.id);
+    } catch (error) {
+      setActionError(formatError(error));
+    } finally {
+      setFixtureReplayingRegressionId(undefined);
+    }
+  }
+
   async function handleCreateSandboxPlan(regression: RegressionArtifact) {
     setSandboxPlanError(null);
     setPlanningRegressionId(regression.id);
@@ -336,6 +411,62 @@ export function AppShell() {
       setSandboxPlanError(formatError(error));
     } finally {
       setPlanningRegressionId(undefined);
+    }
+  }
+
+  async function handleCreateSafetyReport() {
+    if (!currentRun) {
+      return;
+    }
+
+    setReportError(null);
+    setResetMessage(null);
+    setIsCreatingReport(true);
+
+    try {
+      const linkedRegression = regressions.find(
+        (regression) =>
+          regression.runId === currentRun.id ||
+          regression.runId === currentRun.baselineRunId
+      );
+
+      setSafetyReport(
+        await createSafetyReport(currentRun.id, linkedRegression?.id)
+      );
+    } catch (error) {
+      setSafetyReport(null);
+      setReportError(formatError(error));
+    } finally {
+      setIsCreatingReport(false);
+    }
+  }
+
+  async function handleResetDemoData() {
+    setReportError(null);
+    setActionError(null);
+    setResetMessage(null);
+    setIsResettingDemoData(true);
+
+    try {
+      const reset = await resetDemoData();
+
+      setPatchCoachPlan(null);
+      setPatchCoachError(null);
+      setSafetyReport(null);
+      setFixtureReplayResult(null);
+      setReplayComparison(null);
+      setComparisonError(null);
+      setSandboxPlan(null);
+      setSandboxPlanError(null);
+      setLastSavedRegressionId(undefined);
+      setLastReplayedRegressionId(undefined);
+      setLastFixtureReplayedRegressionId(undefined);
+      setResetMessage(reset.safety);
+      await loadStudioData();
+    } catch (error) {
+      setReportError(formatError(error));
+    } finally {
+      setIsResettingDemoData(false);
     }
   }
 
@@ -512,8 +643,11 @@ export function AppShell() {
             trace={currentRun?.trace ?? []}
           />
           <CopilotPromptPanel
+            error={patchCoachError}
             finding={selectedFinding}
             isOpen={showCopilotPanel}
+            isLoading={isLoadingPatchCoach}
+            plan={patchCoachPlan}
             scenarioPack={activePack}
             trace={currentRun?.trace ?? []}
           />
@@ -525,6 +659,17 @@ export function AppShell() {
             run={currentRun}
           />
           <RunnerReadinessPanel />
+          <ReportPanel
+            currentRun={currentRun}
+            error={reportError}
+            fixtureReplayResult={fixtureReplayResult}
+            isCreating={isCreatingReport}
+            isResetting={isResettingDemoData}
+            onCreateReport={() => void handleCreateSafetyReport()}
+            onResetDemoData={() => void handleResetDemoData()}
+            report={safetyReport}
+            resetMessage={resetMessage}
+          />
           <SandboxPlanPanel
             regressions={regressions}
             plan={sandboxPlan}
@@ -533,9 +678,14 @@ export function AppShell() {
             onCreatePlan={(regression) => void handleCreateSandboxPlan(regression)}
           />
           <RegressionPanel
+            fixtureReplayingRegressionId={fixtureReplayingRegressionId}
             regressions={regressions}
+            lastFixtureReplayedRegressionId={lastFixtureReplayedRegressionId}
             lastSavedRegressionId={lastSavedRegressionId}
             lastReplayedRegressionId={lastReplayedRegressionId}
+            onFixtureReplay={(regression) =>
+              void handleFixtureReplayRegression(regression)
+            }
             onReplayMock={(regression) => void handleReplayRegression(regression)}
             replayingRegressionId={replayingRegressionId}
           />

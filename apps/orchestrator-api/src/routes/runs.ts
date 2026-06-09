@@ -6,6 +6,18 @@ import {
   getRunComparison,
   listRuns
 } from "../services/run-service";
+import { createPatchCoachForRun } from "../services/patch-coach-service";
+import { createSafetyReportForRun } from "../services/report-service";
+
+function optionalStringFromBody(body: unknown, key: string) {
+  if (typeof body !== "object" || body === null || !(key in body)) {
+    return undefined;
+  }
+
+  const value = (body as Record<string, unknown>)[key];
+
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
 
 export async function registerRunRoutes(app: FastifyInstance) {
   app.get("/runs", async () => listRuns());
@@ -25,6 +37,20 @@ export async function registerRunRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string };
 
     return getRunComparison(id);
+  });
+
+  app.post("/runs/:id/patch-coach", async (request) => {
+    const { id } = request.params as { id: string };
+    const findingId = optionalStringFromBody(request.body, "findingId");
+
+    return createPatchCoachForRun(id, findingId);
+  });
+
+  app.post("/runs/:id/report", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const regressionId = optionalStringFromBody(request.body, "regressionId");
+
+    return reply.code(201).send(createSafetyReportForRun(id, regressionId));
   });
 
   app.post("/runs/mock", async (request, reply) => {

@@ -53,7 +53,7 @@ export function SandboxPlanPanel({
             Sandbox planning
           </p>
           <h2 className="text-lg font-semibold text-white">
-            Reviewed plan only
+            Reviewed fixture path
           </h2>
         </div>
         <ClipboardCheck className="h-5 w-5 text-signal" aria-hidden="true" />
@@ -62,7 +62,7 @@ export function SandboxPlanPanel({
       <div className="grid gap-2 text-xs text-slate-300">
         <div className="flex items-center justify-between gap-3 rounded bg-white/[0.035] px-3 py-2">
           <span>Current mode</span>
-          <span className="font-semibold text-white">plan only</span>
+          <span className="font-semibold text-white">plan + fixture replay</span>
         </div>
         <div className="flex items-center justify-between gap-3 rounded bg-white/[0.035] px-3 py-2">
           <span>Human review</span>
@@ -75,8 +75,9 @@ export function SandboxPlanPanel({
       </div>
 
       <p className="mt-4 text-sm leading-6 text-slate-300">
-        This is a reviewed sandbox plan, not arbitrary execution. No shell,
-        network, MCP, model, email, database, or file-write actions run.
+        Plans can be promoted only to reviewed synthetic fixture replay. No
+        shell, network, MCP, model, email, database, arbitrary file, or live
+        target actions run.
       </p>
 
       {error ? (

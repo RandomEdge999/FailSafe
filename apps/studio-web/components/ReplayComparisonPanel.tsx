@@ -97,7 +97,7 @@ export function ReplayComparisonPanel({
 
       {isLoading ? (
         <p className="text-sm leading-6 text-slate-300">
-          Loading the in-memory replay comparison from the mock API.
+          Loading the local replay comparison from the mock API.
         </p>
       ) : null}
 

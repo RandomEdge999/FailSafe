@@ -30,19 +30,16 @@ const blockedCapabilities: SandboxReplayBlockedCapability[] = [
   "destructive_operation",
   "live_target_access",
   "secret_access",
-  "background_worker",
-  "persistence_write"
+  "background_worker"
 ];
 
 const notImplementedCapabilities: SandboxReplayNotImplementedCapability[] = [
   "real_sandbox_execution",
-  "fixture_replay_executor",
   "patched_agent_before_after_validation",
   "live_copilot_invocation",
   "live_llm_call",
   "live_mcp_execution",
   "runtime_isolation_proof",
-  "persistent_regression_store",
   "background_worker"
 ];
 
@@ -155,9 +152,9 @@ export function createReviewedSandboxReplayPlan(
         id: "step-01-validate-regression-context",
         sequence: 1,
         kind: "validate_regression_context",
-        title: "Validate in-memory regression context",
+        title: "Validate persisted regression context",
         description:
-          "Confirm the saved regression, baseline run, project, scenario pack, and agent target all match before any future replay path is considered.",
+          "Confirm the saved regression, baseline run, project, scenario pack, and agent target all match before fixture replay is considered.",
         mode: "plan_only",
         willExecute: false,
         expectedEvidence: [
@@ -173,7 +170,7 @@ export function createReviewedSandboxReplayPlan(
         kind: "review_fixture_allowlist",
         title: "Review synthetic fixture allowlist",
         description:
-          "Limit any future replay to hardcoded synthetic fixture identifiers derived from the saved regression context.",
+          "Limit fixture replay to hardcoded synthetic fixture identifiers derived from the saved regression context.",
         mode: "plan_only",
         fixtureId: allowedFixtureIds[0],
         willExecute: false,
@@ -185,7 +182,7 @@ export function createReviewedSandboxReplayPlan(
         kind: "verify_safety_boundaries",
         title: "Verify blocked capabilities",
         description:
-          "Keep shell, network, MCP, model, email, database, arbitrary file, destructive, secret, background, and persistence operations blocked.",
+          "Keep shell, network, MCP, model, email, database, arbitrary file, destructive, secret, and background operations blocked.",
         mode: "plan_only",
         willExecute: false,
         expectedEvidence: blockedCapabilities
@@ -196,7 +193,7 @@ export function createReviewedSandboxReplayPlan(
         kind: "prepare_trace_expectations",
         title: "Prepare expected synthetic evidence",
         description:
-          "Record the expected trace event types and finding categories for future reviewed fixture-only replay comparison.",
+          "Record the expected trace event types and finding categories for reviewed fixture-only replay comparison.",
         mode: "plan_only",
         willExecute: false,
         expectedEvidence: [
@@ -208,14 +205,14 @@ export function createReviewedSandboxReplayPlan(
         id: "step-05-stop-before-execution",
         sequence: 5,
         kind: "stop_before_execution",
-        title: "Stop before execution",
+        title: "Stop before arbitrary execution",
         description:
-          "Require human review before any fixture replay endpoint is implemented or invoked.",
+          "Require the reviewed fixture allowlist before any fixture replay endpoint can return a synthetic replay result.",
         mode: "plan_only",
         willExecute: false,
         expectedEvidence: [
           "reviewStatus=human_review_required",
-          "executed=false"
+          "arbitraryExecution=false"
         ]
       }
     ],
@@ -260,11 +257,7 @@ export function createReviewedSandboxReplayPlan(
         label: "Fixture allowlist only",
         description:
           "Future replay work may only use reviewed synthetic fixture IDs, not client-provided paths, URLs, commands, or tool names.",
-        blockedCapabilities: [
-          "secret_access",
-          "persistence_write",
-          "live_target_access"
-        ],
+        blockedCapabilities: ["secret_access", "live_target_access"],
         enforcedBy: "fixture_allowlist"
       },
       {
@@ -282,11 +275,11 @@ export function createReviewedSandboxReplayPlan(
     requiresHumanReview: true,
     limitations: [
       "This is a reviewed sandbox plan, not arbitrary execution.",
-      "The API stores regressions and runs in memory only.",
-      "No fixture replay endpoint exists in this phase.",
-      "Allowed fixture IDs are metadata for future reviewed fixture-only replay.",
+      "The API stores demo data only in the app-owned local FailSafe store.",
+      "Fixture replay can use only reviewed synthetic fixture IDs.",
+      "Allowed fixture IDs are not client-provided paths, URLs, commands, or tools.",
       "The plan does not prove that a real code mitigation worked.",
-      "Real sandbox execution, runtime isolation, live Copilot, live LLM, MCP, network, email, database, persistence, and background worker paths remain future work."
+      "Real sandbox execution, runtime isolation, live Copilot, live LLM, MCP, network, email, database, and background worker paths remain future work."
     ],
     safetyStatement:
       "Plan only: no tools, shell commands, file actions, network calls, MCP servers, model calls, email, databases, live targets, or external systems are executed."

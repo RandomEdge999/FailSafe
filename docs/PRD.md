@@ -29,6 +29,20 @@ The MVP should demonstrate one complete mock crash-test flow:
 6. Provide Copilot-ready mitigation prompts.
 7. Save or describe a regression case.
 
+## Current Local Product Scope
+
+The current PRD-grade local build extends the MVP with:
+
+- App-owned local persistence for non-seed runs, regressions, sandbox plans, fixture replay results, and Safety Card metadata under `.failsafe-data`.
+- Deterministic mock replay for saved regressions.
+- Reviewed fixture-only replay from FailSafe-owned synthetic fixture IDs.
+- Baseline-vs-replay comparison evidence.
+- Patch Coach plans with Copilot prompt payloads and regression checklists.
+- Local Markdown Safety Card export.
+- CLI commands for runs, regressions, mock replay, fixture replay, Patch Coach, reports, runner preview, sandbox planning, and demo reset.
+
+These flows remain local, synthetic, typed, defensive, and bounded. They are not arbitrary sandbox execution, live MCP execution, live model invocation, live Copilot invocation, or production security certification.
+
 ## Non-Goals
 
 - No live offensive testing against real systems.
@@ -36,8 +50,9 @@ The MVP should demonstrate one complete mock crash-test flow:
 - No real secret handling in demos.
 - No destructive file, shell, email, network, or database actions.
 - No formal security certification claims.
-- No full sandbox runner in the foundation commit.
-- No live LLM API integration in the foundation commit.
+- No arbitrary sandbox runner.
+- No live LLM API integration unless explicitly requested and made opt-in.
+- No live Copilot invocation from the app.
 
 ## Core Workflows
 
@@ -97,6 +112,10 @@ Core entities:
 - `TraceEvent`: typed event with actor, trust boundary, source, raw evidence, and metadata.
 - `Finding`: root-cause analysis with category, severity, confidence, evidence, and mitigations.
 - `CrashScore`: numeric score and factor breakdown.
+- `RegressionArtifact`: saved local replay context for deterministic mock and fixture-only replay.
+- `FixtureReplayResult`: reviewed synthetic fixture replay result with comparison evidence.
+- `PatchCoachPlan`: mitigation steps and Copilot-ready prompt payloads for human review.
+- `SafetyReport`: local Markdown Safety Card export metadata and content.
 
 ## Risk Scoring Summary
 
@@ -132,6 +151,8 @@ The result is clamped between 0 and 100. This is not a formal security standard.
 - Shared schemas typecheck.
 - Attack packs exist as typed mock objects.
 - Scoring engine works with mock data.
+- Saved regressions persist locally under the app-owned `.failsafe-data` store.
+- Mock replay, fixture replay, Patch Coach, and Safety Card export work without live external dependencies.
 - Docs are useful and specific.
 - Copilot instructions and prompt files exist.
 - Custom agent files exist.

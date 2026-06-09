@@ -1,10 +1,16 @@
 import {
+  FixtureReplayResultSchema,
+  PatchCoachPlanSchema,
   RegressionArtifactSchema,
   RunnerDryRunResultSchema,
+  SafetyReportSchema,
   SandboxReplayPlanSchema,
   ScenarioRunSchema,
+  type FixtureReplayResult,
+  type PatchCoachPlan,
   type RegressionArtifact,
   type RunnerDryRunResult,
+  type SafetyReport,
   type SandboxReplayPlan,
   type ScenarioRun
 } from "@failsafe/schemas";
@@ -30,13 +36,19 @@ function printRootHelp() {
 
 Usage:
   pnpm failsafe --help
+  pnpm failsafe runs
   pnpm failsafe regressions
   pnpm failsafe replay --help
   pnpm failsafe replay <regression-id>
+  pnpm failsafe patch-coach <run-id> [finding-id]
+  pnpm failsafe report <run-id>
+  pnpm failsafe reports
   pnpm failsafe runner --help
   pnpm failsafe runner preview
   pnpm failsafe sandbox --help
   pnpm failsafe sandbox plan <regression-id>
+  pnpm failsafe sandbox fixture-replay <regression-id>
+  pnpm failsafe reset-demo-data
 
 Environment:
   FAILSAFE_API_BASE_URL  Override the mock API base URL. Default: http://localhost:4000
@@ -47,8 +59,9 @@ Safety:
   databases, or external systems.
 
 Limitations:
-  Regression artifacts are in-memory inside the API process. Start the mock API
-  with \`pnpm dev:api\` and replay IDs created in that same process.`);
+  Runs, regressions, reviewed fixture replay results, and Safety Cards are
+  stored in the local app-owned .failsafe-data folder. Start the API with
+  \`pnpm dev:api\` before running commands that call endpoints.`);
 }
 
 function printReplayHelp() {
@@ -66,7 +79,7 @@ Notes:
   This CLI only calls the mock API; it does not execute tools, shell commands,
   file actions, network calls, MCP servers, model calls, email, databases, or
   external systems.
-  In-memory regressions disappear when the API process restarts.`);
+  Regression artifacts are stored in the local app-owned .failsafe-data store.`);
 }
 
 function printRunnerHelp() {
@@ -91,17 +104,17 @@ function printSandboxHelp() {
 
 Usage:
   pnpm failsafe sandbox plan <regression-id>
+  pnpm failsafe sandbox fixture-replay <regression-id>
 
 Behavior:
-  Calls POST /regressions/:id/sandbox-plan on the running mock API and prints a
-  reviewed plan for future fixture-only replay.
+  Calls sandbox planning or reviewed fixture-only replay endpoints on the
+  running mock API.
 
 Notes:
   Start the mock API with \`pnpm dev:api\`.
-  This command creates a reviewed plan only. It does not execute tools, shell
-  commands, file actions, network calls, MCP servers, model calls, email,
-  databases, or external systems.
-  In-memory regressions disappear when the API process restarts.`);
+  Fixture replay uses reviewed synthetic fixtures only. It does not accept
+  client paths, URLs, shell commands, tool names, network calls, MCP servers,
+  model calls, email, databases, or live targets.`);
 }
 
 function delay(ms: number) {
@@ -159,7 +172,7 @@ async function listRegressions() {
 
   if (regressions.length === 0) {
     console.log(
-      "No in-memory mock regressions found. Create one in the Studio or through `POST /regressions/mock`."
+      "No local mock regressions found. Create one in the Studio or through `POST /regressions/mock`."
     );
     return;
   }
@@ -168,6 +181,27 @@ async function listRegressions() {
 
   for (const regression of regressions) {
     printRegressionLine(regression);
+  }
+}
+
+async function listRunsCommand() {
+  const runs = await requestJson("/runs", (value) =>
+    ScenarioRunSchema.array().parse(value)
+  );
+
+  console.log(`FailSafe runs from ${apiBaseUrl}:`);
+
+  for (const run of runs) {
+    console.log(
+      [
+        `- ${run.id}`,
+        `status=${run.status}`,
+        `scenario=${run.scenarioPackId}`,
+        `score=${run.score.overall}`,
+        `findings=${run.findings.length}`,
+        `baseline=${run.baselineRunId ?? "none"}`
+      ].join(" | ")
+    );
   }
 }
 
@@ -181,6 +215,23 @@ function printRegressionLine(regression: RegressionArtifact) {
       `created=${regression.createdAt}`
     ].join(" | ")
   );
+}
+
+function printFixtureReplayResult(result: FixtureReplayResult) {
+  console.log("FailSafe reviewed fixture replay complete");
+  console.log(`API base URL: ${apiBaseUrl}`);
+  console.log(`Result ID: ${result.id}`);
+  console.log(`Replay run ID: ${result.replayRun.id}`);
+  console.log(`Regression ID: ${result.regressionId}`);
+  console.log(`Plan ID: ${result.planId}`);
+  console.log(`Review status: ${result.reviewStatus}`);
+  console.log(`Replay status: ${result.replayRun.status}`);
+  console.log(`Replay score: ${result.replayRun.score.overall}`);
+  console.log(`Finding count: ${result.replayRun.findings.length}`);
+  console.log(`Score delta: ${result.comparison.scoreDelta}`);
+  console.log(`Missing expected trace types: ${formatList(result.comparison.missingExpectedTraceEventTypes)}`);
+  console.log(`Allowed fixture IDs: ${formatList(result.allowedFixtureIds)}`);
+  console.log(`Safety statement: ${result.safetyStatement}`);
 }
 
 async function pollRun(runId: string) {
@@ -356,6 +407,148 @@ async function createSandboxReplayPlan(regressionId: string | undefined) {
   printSandboxPlan(plan);
 }
 
+async function replayFixtureRegression(regressionId: string | undefined) {
+  if (!regressionId) {
+    throw new CliError(
+      "Missing regression ID. Run `pnpm failsafe sandbox --help` for usage."
+    );
+  }
+
+  const result = await requestJson(
+    `/regressions/${encodeURIComponent(regressionId)}/fixture-replay`,
+    (value) => FixtureReplayResultSchema.parse(value),
+    {
+      body: "{}",
+      method: "POST"
+    }
+  );
+
+  printFixtureReplayResult(result);
+}
+
+function printPatchCoachPlan(plan: PatchCoachPlan) {
+  console.log("FailSafe Patch Coach plan ready");
+  console.log(`API base URL: ${apiBaseUrl}`);
+  console.log(`Plan ID: ${plan.id}`);
+  console.log(`Run ID: ${plan.runId}`);
+  console.log(`Finding ID: ${plan.findingId}`);
+  console.log(`Mode: ${plan.mode}`);
+  console.log(`Summary: ${plan.summary}`);
+  console.log("Mitigation steps:");
+
+  for (const step of plan.mitigationSteps) {
+    console.log(`- ${step.title}: ${step.rationale}`);
+  }
+
+  console.log("Copilot prompt files:");
+
+  for (const prompt of plan.copilotPrompts) {
+    console.log(`- ${prompt.promptFile} | ${prompt.intent}`);
+  }
+
+  console.log(
+    "Patch Coach only generates prompt payloads. It does not invoke Copilot or execute patches."
+  );
+}
+
+async function createPatchCoachCommand(
+  runId: string | undefined,
+  findingId: string | undefined
+) {
+  if (!runId) {
+    throw new CliError(
+      "Missing run ID. Usage: pnpm failsafe patch-coach <run-id> [finding-id]"
+    );
+  }
+
+  const plan = await requestJson(
+    `/runs/${encodeURIComponent(runId)}/patch-coach`,
+    (value) => PatchCoachPlanSchema.parse(value),
+    {
+      body: JSON.stringify({ findingId }),
+      method: "POST"
+    }
+  );
+
+  printPatchCoachPlan(plan);
+}
+
+function printSafetyReport(report: SafetyReport) {
+  console.log("FailSafe Safety Card exported");
+  console.log(`API base URL: ${apiBaseUrl}`);
+  console.log(`Report ID: ${report.id}`);
+  console.log(`Run ID: ${report.runId}`);
+  console.log(`Path: ${report.appOwnedPath}`);
+  console.log(`Mock only: ${report.mockOnly}`);
+  console.log(`Fixture only: ${report.fixtureOnly}`);
+  console.log(`Summary: ${report.summary}`);
+}
+
+async function createReportCommand(runId: string | undefined) {
+  if (!runId) {
+    throw new CliError("Missing run ID. Usage: pnpm failsafe report <run-id>");
+  }
+
+  const report = await requestJson(
+    `/runs/${encodeURIComponent(runId)}/report`,
+    (value) => SafetyReportSchema.parse(value),
+    {
+      body: "{}",
+      method: "POST"
+    }
+  );
+
+  printSafetyReport(report);
+}
+
+async function listReportsCommand() {
+  const reports = await requestJson("/reports", (value) =>
+    SafetyReportSchema.array().parse(value)
+  );
+
+  if (reports.length === 0) {
+    console.log("No local FailSafe Safety Cards found.");
+    return;
+  }
+
+  console.log(`FailSafe Safety Cards from ${apiBaseUrl}:`);
+
+  for (const report of reports) {
+    console.log(
+      [
+        `- ${report.id}`,
+        `run=${report.runId}`,
+        `path=${report.appOwnedPath}`,
+        `created=${report.createdAt}`
+      ].join(" | ")
+    );
+  }
+}
+
+async function resetDemoDataCommand() {
+  const reset = await requestJson(
+    "/demo/reset",
+    (value) => value as {
+      ok: boolean;
+      mode: string;
+      reset: string[];
+      preserved: string[];
+      safety: string;
+    },
+    {
+      body: "{}",
+      method: "POST"
+    }
+  );
+
+  console.log("FailSafe local demo data reset");
+  console.log(`API base URL: ${apiBaseUrl}`);
+  console.log(`Mode: ${reset.mode}`);
+  console.log(`Reset: ${formatList(reset.reset)}`);
+  console.log(`Preserved: ${formatList(reset.preserved)}`);
+  console.log(`Safety: ${reset.safety}`);
+}
+
 async function previewRunnerPolicy() {
   const result = await requestJson(
     "/runner/dry-run",
@@ -374,6 +567,11 @@ async function main() {
 
   if (!command || command === "--help" || command === "-h") {
     printRootHelp();
+    return;
+  }
+
+  if (command === "runs") {
+    await listRunsCommand();
     return;
   }
 
@@ -420,9 +618,38 @@ async function main() {
       return;
     }
 
+    if (subcommand === "fixture-replay") {
+      await replayFixtureRegression(regressionId);
+      return;
+    }
+
     throw new CliError(
       `Unknown sandbox command: ${subcommand}. Run \`pnpm failsafe sandbox --help\`.`
     );
+  }
+
+  if (command === "patch-coach") {
+    const [runId, findingId] = args;
+
+    await createPatchCoachCommand(runId, findingId);
+    return;
+  }
+
+  if (command === "report") {
+    const [runId] = args;
+
+    await createReportCommand(runId);
+    return;
+  }
+
+  if (command === "reports") {
+    await listReportsCommand();
+    return;
+  }
+
+  if (command === "reset-demo-data") {
+    await resetDemoDataCommand();
+    return;
   }
 
   if (command === "regressions") {

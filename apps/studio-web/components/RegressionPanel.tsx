@@ -1,19 +1,25 @@
 import type { RegressionArtifact } from "@failsafe/schemas";
-import { Loader2, RefreshCcw, Save } from "lucide-react";
+import { FlaskConical, Loader2, RefreshCcw, Save } from "lucide-react";
 import { EmptyState } from "./EmptyState";
 
 type RegressionPanelProps = {
+  fixtureReplayingRegressionId?: string;
   regressions: RegressionArtifact[];
+  lastFixtureReplayedRegressionId?: string;
   lastSavedRegressionId?: string;
   lastReplayedRegressionId?: string;
+  onFixtureReplay: (regression: RegressionArtifact) => void;
   onReplayMock: (regression: RegressionArtifact) => void;
   replayingRegressionId?: string;
 };
 
 export function RegressionPanel({
+  fixtureReplayingRegressionId,
   regressions,
+  lastFixtureReplayedRegressionId,
   lastSavedRegressionId,
   lastReplayedRegressionId,
+  onFixtureReplay,
   onReplayMock,
   replayingRegressionId
 }: RegressionPanelProps) {
@@ -31,14 +37,18 @@ export function RegressionPanel({
       {regressions.length === 0 ? (
         <EmptyState
           title="No regressions saved"
-          body="Save a completed mock run to create an in-memory regression artifact."
+          body="Save a completed mock run to create a persisted local regression artifact."
         />
       ) : (
         <div className="space-y-3">
           {regressions.map((regression) => {
             const isLastSaved = regression.id === lastSavedRegressionId;
             const isLastReplayed = regression.id === lastReplayedRegressionId;
+            const isLastFixtureReplayed =
+              regression.id === lastFixtureReplayedRegressionId;
             const isReplaying = regression.id === replayingRegressionId;
+            const isFixtureReplaying =
+              regression.id === fixtureReplayingRegressionId;
 
             return (
               <article
@@ -63,24 +73,55 @@ export function RegressionPanel({
                           replayed
                         </span>
                       ) : null}
+                      {isLastFixtureReplayed ? (
+                        <span className="rounded bg-signal/20 px-2 py-1 text-xs font-semibold text-signal">
+                          fixture replayed
+                        </span>
+                      ) : null}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    disabled={!regression.mockReplayable || isReplaying}
-                    onClick={() => onReplayMock(regression)}
-                    className="inline-flex min-h-9 items-center gap-2 rounded-md border border-white/15 bg-white/8 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
-                  >
-                    {isReplaying ? (
-                      <Loader2
-                        className="h-3.5 w-3.5 animate-spin"
-                        aria-hidden="true"
-                      />
-                    ) : (
-                      <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
-                    )}
-                    {isReplaying ? "Replaying..." : "Replay Mock"}
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={!regression.mockReplayable || isReplaying}
+                      onClick={() => onReplayMock(regression)}
+                      className="inline-flex min-h-9 items-center gap-2 rounded-md border border-white/15 bg-white/8 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
+                    >
+                      {isReplaying ? (
+                        <Loader2
+                          className="h-3.5 w-3.5 animate-spin"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <RefreshCcw
+                          className="h-3.5 w-3.5"
+                          aria-hidden="true"
+                        />
+                      )}
+                      {isReplaying ? "Replaying..." : "Replay Mock"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isFixtureReplaying}
+                      onClick={() => onFixtureReplay(regression)}
+                      className="inline-flex min-h-9 items-center gap-2 rounded-md border border-signal/25 bg-signal/10 px-3 py-1.5 text-xs font-semibold text-signal transition hover:bg-signal/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
+                    >
+                      {isFixtureReplaying ? (
+                        <Loader2
+                          className="h-3.5 w-3.5 animate-spin"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <FlaskConical
+                          className="h-3.5 w-3.5"
+                          aria-hidden="true"
+                        />
+                      )}
+                      {isFixtureReplaying
+                        ? "Running..."
+                        : "Fixture Replay"}
+                    </button>
+                  </div>
                 </div>
                 <p className="mt-2 text-sm leading-6 text-slate-300">
                   {regression.description}

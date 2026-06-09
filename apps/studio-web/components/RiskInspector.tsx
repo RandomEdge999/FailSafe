@@ -13,6 +13,11 @@ export function RiskInspector({
   run
 }: RiskInspectorProps) {
   const findingCount = run?.findings.length ?? 0;
+  const mode = run?.id.startsWith("run-fixture-")
+    ? "fixture replay"
+    : run?.baselineRunId
+      ? "mock replay"
+      : "mock";
 
   return (
     <aside className="rounded-lg border border-white/10 bg-panel p-4 shadow-lab">
@@ -74,7 +79,7 @@ export function RiskInspector({
             </div>
             <div className="flex justify-between gap-3">
               <dt className="text-slate-400">Mode</dt>
-              <dd className="font-semibold text-white">mock</dd>
+              <dd className="font-semibold text-white">{mode}</dd>
             </div>
           </dl>
         </div>

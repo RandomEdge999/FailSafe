@@ -16,6 +16,17 @@ FailSafe scenarios must not target live external systems without explicit author
 
 Demo mode must not perform destructive file, shell, email, network, database, or account actions. High-risk actions must remain mocked or blocked.
 
+## App-Owned Local Persistence
+
+FailSafe may persist local demo evidence only under the app-owned `.failsafe-data` directory. The API must not accept client-provided filesystem paths for persistence, report export, replay fixtures, or reset behavior.
+
+Current persistence policy:
+
+- Non-seed runs, regressions, sandbox plans, fixture replay results, and report metadata can be stored in `.failsafe-data/store.json`.
+- Markdown Safety Cards can be written to `.failsafe-data/reports`.
+- `POST /demo/reset` may reset only `.failsafe-data` state.
+- No source files, arbitrary user paths, secrets, external databases, shell commands, or network resources may be touched by persistence flows.
+
 ## Dry-Run Runner Contract
 
 Phase 3A dry-run runner output is a policy preview only. It must always report `executed: false` and `dryRunOnly: true`.
@@ -30,20 +41,33 @@ Current dry-run policy:
 
 Do not convert dry-run preview decisions into real execution unless an explicitly reviewed sandbox runner, authorization model, and approval gate exist.
 
-## Reviewed Sandbox Replay Plan
+## Reviewed Sandbox Replay Plan And Fixture Replay
 
 Phase 3B sandbox replay output is a reviewed plan only. It must report `mode: plan_only`, `mockOnly: true`, `fixtureOnly: true`, `reviewStatus: human_review_required`, and `requiresHumanReview: true`.
 
 Current sandbox plan policy:
 
-- The plan endpoint may look up only the in-memory regression, baseline run, project, scenario pack, and agent target context.
-- Allowed fixture IDs are synthetic allowlist metadata for future review only.
-- No fixture replay endpoint exists in Phase 3B.
+- The plan endpoint may look up only the local FailSafe regression, baseline run, project, scenario pack, and agent target context.
+- Allowed fixture IDs are synthetic allowlist metadata.
 - No arbitrary file paths, URLs, shell commands, tool names, MCP calls, model calls, email targets, database targets, secrets, or live targets may be accepted from the client.
-- Arbitrary file reads, arbitrary file writes, shell commands, network requests, live target access, MCP tool calls, model calls, email sends, database queries, destructive operations, secret access, background workers, and persistence writes remain blocked or not implemented.
+- Arbitrary file reads, arbitrary file writes, shell commands, network requests, live target access, MCP tool calls, model calls, email sends, database queries, destructive operations, secret access, and background workers remain blocked or not implemented.
 - Sandbox plans are not runtime isolation proof and are not evidence that a real code mitigation worked.
 
-Do not convert sandbox plans into fixture replay or real sandbox execution unless the fixture allowlist, authorization model, and approval gate are explicitly reviewed and validated first.
+Current fixture replay policy:
+
+- Fixture replay may run only from a saved local regression and generated sandbox plan.
+- Fixture replay must use FailSafe-owned synthetic fixture IDs only.
+- Fixture replay must not accept paths, URLs, commands, arbitrary tool names, live targets, MCP servers, models, email destinations, database targets, or secrets from the client.
+- Fixture replay may create a typed synthetic replay run, comparison evidence, and reportable local evidence.
+- Fixture replay is not arbitrary sandbox execution, patched-agent execution, or runtime isolation proof.
+
+Do not convert sandbox plans or fixture replay into real sandbox execution unless the authorization model, isolation layer, approval gate, fixture allowlist, and audit trail are explicitly reviewed and validated first.
+
+## Patch Coach And Reports
+
+Patch Coach may generate Copilot-ready prompt payloads, mitigation steps, and regression checklists. It must not invoke Copilot, modify files, call models, or apply patches from the app.
+
+Safety Cards may summarize typed local run evidence and write Markdown under `.failsafe-data/reports`. They must state limitations and must not claim certification, full coverage, or real mitigation proof.
 
 ## Synthetic Examples Only
 

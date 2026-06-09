@@ -2,18 +2,24 @@ import {
   CreateMockRegressionInputSchema,
   CreateMockRunInputSchema,
   FindingSchema,
+  FixtureReplayResultSchema,
+  PatchCoachPlanSchema,
   ProjectSchema,
   RegressionArtifactSchema,
   ReplayComparisonSchema,
+  SafetyReportSchema,
   SandboxReplayPlanSchema,
   ScenarioPackSchema,
   ScenarioRunSchema,
   type CreateMockRegressionInput,
   type CreateMockRunInput,
   type Finding,
+  type FixtureReplayResult,
+  type PatchCoachPlan,
   type Project,
   type RegressionArtifact,
   type ReplayComparison,
+  type SafetyReport,
   type SandboxReplayPlan,
   type ScenarioPack,
   type ScenarioRun
@@ -195,6 +201,19 @@ export function replayMockRegression(id: string): Promise<ScenarioRun> {
   );
 }
 
+export function replayFixtureRegression(
+  id: string
+): Promise<FixtureReplayResult> {
+  return requestJson(
+    `/regressions/${id}/fixture-replay`,
+    (value) => FixtureReplayResultSchema.parse(value),
+    {
+      body: "{}",
+      method: "POST"
+    }
+  );
+}
+
 export function createSandboxPlan(id: string): Promise<SandboxReplayPlan> {
   return requestJson(
     `/regressions/${id}/sandbox-plan`,
@@ -204,4 +223,68 @@ export function createSandboxPlan(id: string): Promise<SandboxReplayPlan> {
       method: "POST"
     }
   );
+}
+
+export function createPatchCoachPlan(
+  runId: string,
+  findingId?: string
+): Promise<PatchCoachPlan> {
+  return requestJson(
+    `/runs/${runId}/patch-coach`,
+    (value) => PatchCoachPlanSchema.parse(value),
+    {
+      body: JSON.stringify({ findingId }),
+      method: "POST"
+    }
+  );
+}
+
+export function createSafetyReport(
+  runId: string,
+  regressionId?: string
+): Promise<SafetyReport> {
+  return requestJson(
+    `/runs/${runId}/report`,
+    (value) => SafetyReportSchema.parse(value),
+    {
+      body: JSON.stringify({ regressionId }),
+      method: "POST"
+    }
+  );
+}
+
+export function listReports(): Promise<SafetyReport[]> {
+  return requestJson("/reports", (value) =>
+    SafetyReportSchema.array().parse(value)
+  );
+}
+
+export function resetDemoData(): Promise<{
+  ok: boolean;
+  mode: string;
+  reset: string[];
+  preserved: string[];
+  safety: string;
+}> {
+  return requestJson("/demo/reset", (value) => {
+    if (
+      typeof value === "object" &&
+      value !== null &&
+      "ok" in value &&
+      "mode" in value
+    ) {
+      return value as {
+        ok: boolean;
+        mode: string;
+        reset: string[];
+        preserved: string[];
+        safety: string;
+      };
+    }
+
+    throw new ApiClientError("Demo reset response was not valid.", 200, value);
+  }, {
+    body: "{}",
+    method: "POST"
+  });
 }

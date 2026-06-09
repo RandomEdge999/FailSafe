@@ -1,20 +1,42 @@
 import {
+  FixtureReplayResultSchema,
   RegressionArtifactSchema,
+  SandboxReplayPlanSchema,
   type CreateMockRegressionInput,
+  type FixtureReplayResult,
   type RegressionArtifact,
   type SandboxReplayPlan
 } from "@failsafe/schemas";
 import { createReviewedSandboxReplayPlan } from "@failsafe/scenario-engine";
 import { randomUUID } from "node:crypto";
 import {
+  createFixtureReplayRun,
   createMockReplayRun,
   getRunById,
   getRunReplayContext
 } from "./run-service";
 import { getProjectById } from "./project-service";
 import { getScenarioById } from "./scenario-service";
+import {
+  loadPersistedStore,
+  persistFixtureReplayResults,
+  persistRegressionArtifacts,
+  persistSandboxPlans
+} from "./store-service";
 
-const regressions = new Map<string, RegressionArtifact>();
+const persistedStore = loadPersistedStore();
+const regressions = new Map<string, RegressionArtifact>(
+  persistedStore.regressions.map((regression) => [regression.id, regression])
+);
+const sandboxPlans = new Map<string, SandboxReplayPlan>(
+  persistedStore.sandboxPlans.map((plan) => [plan.regressionId, plan])
+);
+const fixtureReplayResults = new Map<string, FixtureReplayResult>(
+  persistedStore.fixtureReplayResults.map((result) => [
+    result.regressionId,
+    result
+  ])
+);
 
 function slugify(value: string) {
   return value
@@ -32,6 +54,36 @@ export function listRegressions() {
 
 export function getRegressionById(id: string) {
   return regressions.get(id);
+}
+
+export function listSandboxPlans() {
+  return Array.from(sandboxPlans.values()).sort((a, b) =>
+    b.createdAt.localeCompare(a.createdAt)
+  );
+}
+
+export function listFixtureReplayResults() {
+  return Array.from(fixtureReplayResults.values()).sort((a, b) =>
+    b.completedAt.localeCompare(a.completedAt)
+  );
+}
+
+export function resetRegressionState() {
+  regressions.clear();
+  sandboxPlans.clear();
+  fixtureReplayResults.clear();
+}
+
+function persistRegressions() {
+  persistRegressionArtifacts(Array.from(regressions.values()));
+}
+
+function persistPlans() {
+  persistSandboxPlans(Array.from(sandboxPlans.values()));
+}
+
+function persistFixtureResults() {
+  persistFixtureReplayResults(Array.from(fixtureReplayResults.values()));
 }
 
 function requestError(message: string, code: string, statusCode: number) {
@@ -118,6 +170,7 @@ export function createMockRegression(input: CreateMockRegressionInput) {
   });
 
   regressions.set(regression.id, regression);
+  persistRegressions();
 
   return regression;
 }
@@ -149,7 +202,7 @@ export function createSandboxPlanForRegression(
 
   if (!baselineRun) {
     throw requestError(
-      `Baseline run ${regression.runId} was not found in this API process. Regressions and runs are in-memory only; recreate the mock run and regression after restarting the API.`,
+      `Baseline run ${regression.runId} was not found in the local FailSafe store. Recreate the mock run and regression if demo data was reset.`,
       "baseline_run_not_found",
       404
     );
@@ -187,11 +240,45 @@ export function createSandboxPlanForRegression(
     );
   }
 
-  return createReviewedSandboxReplayPlan({
-    regression,
-    baselineRun,
-    scenarioPack,
-    project,
-    agentTarget
-  });
+  const plan = SandboxReplayPlanSchema.parse(
+    createReviewedSandboxReplayPlan({
+      regression,
+      baselineRun,
+      scenarioPack,
+      project,
+      agentTarget
+    })
+  );
+
+  sandboxPlans.set(regression.id, plan);
+  persistPlans();
+
+  return plan;
+}
+
+export function replayFixtureRegression(id: string): FixtureReplayResult {
+  const regression = getRegressionById(id);
+
+  if (!regression) {
+    throw requestError(
+      `Regression ${id} was not found.`,
+      "regression_not_found",
+      404
+    );
+  }
+
+  const plan =
+    sandboxPlans.get(regression.id) ?? createSandboxPlanForRegression(id);
+  const result = FixtureReplayResultSchema.parse(
+    createFixtureReplayRun(regression, plan)
+  );
+
+  fixtureReplayResults.set(regression.id, result);
+  persistFixtureResults();
+
+  return result;
+}
+
+export function getFixtureReplayResultByRegressionId(id: string) {
+  return fixtureReplayResults.get(id);
 }

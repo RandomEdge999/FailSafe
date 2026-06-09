@@ -32,15 +32,17 @@ Show the FailSafe score and factor breakdown. Explain that the score is a produc
 
 ## 2:50 - Generate Mitigation
 
-Click a finding card and show the detail panel: category, severity, confidence, status, root cause, evidence event IDs, recommended mitigations, generated Copilot prompt preview, and suggested regression name. Then click Fix with Copilot. Explain that the panel previews a bounded payload for `.github/prompts/patch-guardrail.prompt.md` with trace evidence and allowed mitigation patterns. No live code patch is executed from the UI in Phase 2.
+Click a finding card and show the detail panel: category, severity, confidence, status, root cause, evidence event IDs, recommended mitigations, generated Copilot prompt preview, and suggested regression name. Then click Fix with Copilot. Explain that the API generates a typed Patch Coach plan with mitigation steps, Copilot prompt payloads, and a regression checklist. No live Copilot call or code patch is executed from the UI.
 
 ## 3:30 - Save, Replay, And Compare Regression
 
-Click Save Regression. The UI calls `POST /regressions/mock`, then displays the saved in-memory artifact with finding count, trace event count, expected safe behavior context, scenario engine version, and a local mock replay endpoint.
+Click Save Regression. The UI calls `POST /regressions/mock`, then displays the saved local artifact with finding count, trace event count, expected safe behavior context, scenario engine version, and a local mock replay endpoint. Explain that it is persisted under the app-owned `.failsafe-data` store.
 
 Click Replay Mock on the saved artifact. The UI calls `POST /regressions/:id/replay-mock`; the API verifies the artifact is mock replayable and reruns the same deterministic synthetic scenario with the saved seed. The replayed run appears in the same timeline and score panels.
 
-Show the Baseline vs Replay panel. Explain that the UI calls `GET /runs/:id/comparison` for the replay run and compares status, score delta, finding count delta, trace event count delta, matching trace event types, missing expected trace event types, and new replay trace event types. Emphasize that this compares two synthetic mock runs. It does not prove a real mitigation worked, and no patched-agent sandbox execution exists yet.
+Show the Baseline vs Replay panel. Explain that the UI calls `GET /runs/:id/comparison` for the replay run and compares status, score delta, finding count delta, trace event count delta, matching trace event types, missing expected trace event types, and new replay trace event types. Emphasize that this compares synthetic evidence only.
+
+Click Fixture Replay on the same artifact. The UI calls `POST /regressions/:id/fixture-replay`; the API creates a reviewed fixture-only replay run from app-owned synthetic fixture IDs. Show the improved score and missing expected finding category in Baseline vs Replay. Explain that this is not arbitrary sandbox execution or real patched-agent proof.
 
 ## 4:20 - Runner And Sandbox Readiness
 
@@ -61,25 +63,28 @@ Show the Sandbox Planning panel. Generate a plan for the saved regression and po
 
 - mode: plan_only
 - review status: human_review_required
-- allowed fixture IDs are synthetic allowlist metadata only
+- allowed fixture IDs are synthetic allowlist metadata
 - no arbitrary execution
-- blocked shell, network, MCP, model, email, database, arbitrary file, destructive, secret, persistence, and background-worker capabilities
-- real sandbox execution and fixture replay execution are not implemented yet
+- blocked shell, network, MCP, model, email, database, arbitrary file, destructive, secret, and background-worker capabilities
+- real sandbox execution is not implemented
 
-Explain that `POST /regressions/:id/sandbox-plan` prepares a reviewed plan from the in-memory regression and baseline run. It does not execute tools, shell commands, file actions, network calls, MCP servers, model calls, email, databases, or external systems.
+Explain that `POST /regressions/:id/sandbox-plan` prepares a reviewed plan from the local regression and baseline run. It does not execute tools, shell commands, file actions, network calls, MCP servers, model calls, email, databases, or external systems.
 
-Point out what remains intentionally mocked: no real tools, file operations, shell commands, network calls, LLM calls, MCP execution, Copilot invocation, email, database actions, persistence, auth, queues, or deployment infrastructure.
+Export a Safety Card from the Reports and Data panel. Show the `.failsafe-data/reports` path and the Markdown preview. Point out what remains intentionally mocked or future work: no real sandbox isolation, live tools, arbitrary file operations, shell commands, network calls, LLM calls, MCP execution, Copilot invocation, email, database actions, auth, queues, or deployment infrastructure.
 
 Optionally show the safe local CLI while the API is still running:
 
 ```bash
 pnpm failsafe regressions
 pnpm failsafe replay <regression-id>
+pnpm failsafe sandbox fixture-replay <regression-id>
+pnpm failsafe patch-coach <run-id>
+pnpm failsafe report <run-id>
 pnpm failsafe runner preview
 pnpm failsafe sandbox plan <regression-id>
 ```
 
-Explain that the CLI only calls the mock API, only works with in-memory regressions from the current API process, and does not execute tools, shell commands, file actions, network requests, MCP servers, model calls, email, databases, or external systems. The sandbox command creates a reviewed plan only.
+Explain that the CLI only calls the local API and app-owned store. It does not execute tools, shell commands, arbitrary file actions, network requests, MCP servers, model calls, email, databases, or external systems. Fixture replay uses reviewed synthetic fixtures only.
 
 ## 4:45 - Microsoft and Copilot Angle
 

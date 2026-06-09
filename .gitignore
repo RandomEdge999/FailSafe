@@ -10,5 +10,6 @@ coverage/
 *.log
 pnpm-debug.log*
 tsconfig.tsbuildinfo
+.failsafe-data/
 .DS_Store
 Thumbs.db

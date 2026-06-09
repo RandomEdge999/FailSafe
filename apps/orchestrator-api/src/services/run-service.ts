@@ -1,29 +1,39 @@
 import {
+  FIXTURE_REPLAY_VERSION,
   MOCK_SCENARIO_VERSION,
   compareMockReplayRuns,
   deriveMockScenarioSeed,
-  executeMockScenario
+  executeMockScenario,
+  executeReviewedFixtureReplay
 } from "@failsafe/scenario-engine";
 import {
   ScenarioRunSchema,
   type CreateMockRunInput,
+  type FixtureReplayResult,
   type RegressionArtifact,
   type ReplayComparison,
+  type SandboxReplayPlan,
   type ScenarioRun
 } from "@failsafe/schemas";
 import { randomUUID } from "node:crypto";
 import { mockRuns } from "../data/mock-runs";
 import { getProjectById } from "./project-service";
 import { getScenarioById } from "./scenario-service";
+import {
+  loadPersistedStore,
+  persistRunRecords,
+  type StoredRunRecord
+} from "./store-service";
 
-type StoredRun = {
+type SeedRunRecord = {
   createdAtMs: number;
-  lifecycle: "seed" | "mock";
+  lifecycle: "seed";
   run: ScenarioRun;
   seed: string;
   scenarioVersion: string;
-  replayedFromRegressionId?: string;
 };
+
+type RuntimeRunRecord = SeedRunRecord | StoredRunRecord;
 
 export type RunReplayContext = {
   seed: string;
@@ -34,23 +44,42 @@ export type RunReplayContext = {
 const queuedMs = 500;
 const runningMs = 2_000;
 
-const storedRuns = new Map<string, StoredRun>(
-  mockRuns.map((run) => [
-    run.id,
-    {
-      createdAtMs: Date.parse(run.startedAt),
-      lifecycle: "seed",
-      run,
-      seed: deriveMockScenarioSeed({
-        projectId: run.projectId,
-        agentTargetId: run.agentTargetId,
-        scenarioPackId: run.scenarioPackId,
-        runId: run.id
-      }),
-      scenarioVersion: MOCK_SCENARIO_VERSION
-    }
-  ])
-);
+const seedRunRecords = mockRuns.map((run) => [
+  run.id,
+  {
+    createdAtMs: Date.parse(run.startedAt),
+    lifecycle: "seed" as const,
+    run,
+    seed: deriveMockScenarioSeed({
+      projectId: run.projectId,
+      agentTargetId: run.agentTargetId,
+      scenarioPackId: run.scenarioPackId,
+      runId: run.id
+    }),
+    scenarioVersion: MOCK_SCENARIO_VERSION
+  }
+]) satisfies Array<[string, SeedRunRecord]>;
+
+const storedRuns = new Map<string, RuntimeRunRecord>([
+  ...seedRunRecords,
+  ...loadPersistedStore().runs.map((record) => [record.run.id, record] as const)
+]);
+
+function persistCurrentRuns() {
+  persistRunRecords(
+    Array.from(storedRuns.values()).filter(
+      (record): record is StoredRunRecord => record.lifecycle !== "seed"
+    )
+  );
+}
+
+export function resetRunState() {
+  storedRuns.clear();
+
+  for (const [runId, record] of seedRunRecords) {
+    storedRuns.set(runId, record);
+  }
+}
 
 function requestError(message: string, code: string, statusCode: number) {
   const error = new Error(message);
@@ -102,8 +131,12 @@ function resolveRunContext(input: CreateMockRunInput) {
   return { project, scenarioPack, agentTarget };
 }
 
-function materializeRun(record: StoredRun): ScenarioRun {
+function materializeRun(record: RuntimeRunRecord): ScenarioRun {
   if (record.lifecycle === "seed") {
+    return record.run;
+  }
+
+  if (record.lifecycle === "fixture_replay") {
     return record.run;
   }
 
@@ -210,6 +243,7 @@ export function createMockRun(input: CreateMockRunInput) {
     seed: execution.seed,
     scenarioVersion: execution.scenarioVersion
   });
+  persistCurrentRuns();
 
   return getRunById(execution.run.id) ?? execution.run;
 }
@@ -275,6 +309,79 @@ export function createMockReplayRun(regression: RegressionArtifact) {
     scenarioVersion: execution.scenarioVersion,
     replayedFromRegressionId: regression.id
   });
+  persistCurrentRuns();
 
   return getRunById(execution.run.id) ?? execution.run;
+}
+
+export function createFixtureReplayRun(
+  regression: RegressionArtifact,
+  plan: SandboxReplayPlan
+): FixtureReplayResult {
+  const baselineRun = getRunById(regression.runId);
+
+  if (!baselineRun) {
+    throw requestError(
+      `Baseline run ${regression.runId} was not found.`,
+      "baseline_run_not_found",
+      404
+    );
+  }
+
+  const project = getProjectById(regression.projectId);
+
+  if (!project) {
+    throw requestError(
+      `Project ${regression.projectId} was not found.`,
+      "project_not_found",
+      404
+    );
+  }
+
+  const scenarioPack = getScenarioById(regression.scenarioPackId);
+
+  if (!scenarioPack) {
+    throw requestError(
+      `Scenario pack ${regression.scenarioPackId} was not found.`,
+      "scenario_not_found",
+      404
+    );
+  }
+
+  const agentTarget = project.agentTargets.find(
+    (target) => target.id === regression.agentTargetId
+  );
+
+  if (!agentTarget) {
+    throw requestError(
+      `Agent target ${regression.agentTargetId} was not found.`,
+      "agent_target_not_found",
+      404
+    );
+  }
+
+  const createdAtMs = Date.now();
+  const runId = `run-fixture-${runSlug(scenarioPack.id.replace(/^pack-/, ""))}-${randomUUID().slice(0, 8)}`;
+  const result = executeReviewedFixtureReplay({
+    regression,
+    baselineRun,
+    scenarioPack,
+    project,
+    agentTarget,
+    plan,
+    runId,
+    startedAt: new Date(createdAtMs).toISOString()
+  });
+
+  storedRuns.set(result.replayRun.id, {
+    createdAtMs,
+    lifecycle: "fixture_replay",
+    run: result.replayRun,
+    seed: regression.seed,
+    scenarioVersion: FIXTURE_REPLAY_VERSION,
+    replayedFromRegressionId: regression.id
+  });
+  persistCurrentRuns();
+
+  return result;
 }

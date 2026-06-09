@@ -31,7 +31,7 @@ Status: implemented in the current Phase 1 pass.
 
 Implemented notes:
 
-- Runs and regressions are stored in memory for the API server process only.
+- The initial Phase 1 implementation stored runs and regressions in memory. The current product now persists non-seed runs and regressions in the app-owned `.failsafe-data` store.
 - `POST /runs/mock` accepts selected project, scenario pack, and optional agent target context.
 - `GET /runs/:id` materializes a short synthetic lifecycle for frontend polling.
 - `POST /regressions/mock` creates a typed artifact from completed run trace and findings.
@@ -45,7 +45,7 @@ Status: implemented in the Phase 2 pass.
 - Moved scenario-specific trace, finding, and score generation out of the API run service.
 - Added shared execution schemas for mock scenario execution results.
 - Extended regression artifacts with agent target ID, seed, source run status, mock replayability, scenario version, expected finding categories, and expected trace event types.
-- Added `POST /regressions/:id/replay-mock` to create safe in-memory mock replay runs.
+- Added `POST /regressions/:id/replay-mock` to create safe local mock replay runs.
 - Added a Studio `Replay Mock` affordance for saved regression artifacts.
 - Extended `scripts/dev-check.ts` to validate all starter packs through the scenario engine and verify mock replay safety checks.
 
@@ -53,7 +53,7 @@ Implemented notes:
 
 - Replay runs use the saved deterministic seed and set `baselineRunId` to the source run.
 - The engine never executes real tools, file operations, shell commands, network calls, LLM calls, MCP calls, Copilot calls, email, or database actions.
-- Runs and regression artifacts remain in memory for the API process only.
+- Runs and regression artifacts are persisted locally in `.failsafe-data` after Phase 3D.
 
 ## Phase 2.5: Safe Mock Replay CLI And Replay Comparison
 
@@ -71,9 +71,9 @@ Status: implemented in the current Phase 2.5 pass.
 Implemented notes:
 
 - CLI replay requires a running API process.
-- CLI and Studio replay both use in-memory regression artifacts only.
+- CLI and Studio replay use the local app-owned regression store.
 - The comparison panel compares synthetic mock runs only and does not prove real mitigation success.
-- No persistence, sandbox runner, real Copilot invocation, live LLM call, MCP execution, file operation, shell execution, email action, network action, or database action was added.
+- No real sandbox runner, real Copilot invocation, live LLM call, MCP execution, file operation, shell execution, email action, network action, or database action was added.
 
 ## Phase 3A: Reviewed Dry-Run Runner Contract And Policy Preview
 
@@ -93,7 +93,7 @@ Implemented notes:
 - File writes, shell commands, network requests, email sends, and database queries are blocked.
 - MCP tool calls and model calls are marked not implemented.
 - Dry-run policy preview is not runtime isolation and does not prove a patched agent is safe.
-- No Docker, gVisor, background worker, live LLM call, MCP execution, file operation, shell execution, network action, email action, database action, persistence, auth, Redis, PostgreSQL, or deployment infrastructure was added.
+- No Docker, gVisor, background worker, live LLM call, MCP execution, file operation, shell execution, network action, email action, database action, auth, Redis, PostgreSQL, or deployment infrastructure was added.
 
 ## Phase 2 Original Target
 
@@ -123,55 +123,82 @@ Status: implemented in the current Phase 3B pass.
 - Added `createReviewedSandboxReplayPlan` in `packages/scenario-engine`.
 - Added `POST /regressions/:id/sandbox-plan`.
 - Added `pnpm failsafe sandbox --help` and `pnpm failsafe sandbox plan <regression-id>`.
-- Added a Studio Sandbox Planning panel that generates and displays plan-only sandbox readiness from saved in-memory regressions.
+- Added a Studio Sandbox Planning panel that generates and displays plan-only sandbox readiness from saved local regressions.
 - Extended `scripts/dev-check.ts` to validate the sandbox plan schema, review-required status, non-executable steps, blocked capability set, not-implemented capability set, and CLI sandbox help.
 
 Implemented notes:
 
 - Sandbox planning is `plan_only`, `mockOnly: true`, `fixtureOnly: true`, and `reviewStatus: human_review_required`.
-- The plan endpoint looks up the in-memory regression, baseline run, project, scenario pack, and agent target; it does not read files or call external services.
-- Allowed fixture IDs are synthetic allowlist metadata for future review only.
-- Shell commands, arbitrary file reads/writes, network requests, live targets, MCP calls, model calls, email sends, database queries, destructive operations, secret access, background workers, and persistence writes remain blocked or not implemented.
-- No fixture replay endpoint, isolated worker, Docker, gVisor, background worker, live LLM call, MCP execution, file operation, shell execution, network action, email action, database action, persistence, auth, Redis, PostgreSQL, or deployment infrastructure was added.
+- The plan endpoint looks up the persisted local regression, baseline run, project, scenario pack, and agent target; it does not read arbitrary files or call external services.
+- Allowed fixture IDs are synthetic allowlist metadata for reviewed fixture-only replay.
+- Shell commands, arbitrary file reads/writes, network requests, live targets, MCP calls, model calls, email sends, database queries, destructive operations, secret access, and background workers remain blocked or not implemented.
+- No isolated worker, Docker, gVisor, background worker, live LLM call, MCP execution, arbitrary file operation, shell execution, network action, email action, database action, auth, Redis, PostgreSQL, or deployment infrastructure was added.
 
 ## Phase 3C: Reviewed Fixture-Only Replay
 
-Build next:
+Status: implemented in the PRD completion pass.
 
-- A hardcoded in-memory fixture map for reviewed synthetic fixture IDs only.
-- A narrow `POST /regressions/:id/sandbox-fixture-replay` endpoint only if it accepts no paths, URLs, commands, tool names, or live targets from the client.
-- Typed fixture replay result validation that still reports no arbitrary execution.
-- Studio and CLI affordances that clearly say fixture replay only.
-- Dev checks that fail if shell, network, MCP, model, email, database, arbitrary file, destructive, persistence, or background-worker paths are introduced.
+- Added shared `FixtureReplayResult` schemas.
+- Added a deterministic reviewed fixture replay helper in `packages/scenario-engine`.
+- Added `POST /regressions/:id/fixture-replay` and `GET /regressions/:id/fixture-replay`.
+- Added a Studio `Fixture Replay` action on saved regressions.
+- Added `pnpm failsafe sandbox fixture-replay <regression-id>`.
+- Extended `scripts/dev-check.ts` to validate fixture replay status, score improvement, trace evidence, blocked capabilities, CLI help, and safety checks.
+
+Implemented notes:
+
+- Fixture replay uses app-owned synthetic fixture IDs derived from the reviewed sandbox plan.
+- The endpoint accepts no client-provided paths, URLs, commands, tool names, MCP targets, model targets, email targets, database targets, secrets, or live targets.
+- Fixture replay creates a typed synthetic replay run with `status: passed` and comparison evidence.
+- Fixture replay is not arbitrary sandbox execution and is not runtime isolation proof.
+
+## Phase 3D: App-Owned Local Persistence
+
+Status: implemented in the PRD completion pass.
+
+- Added `.failsafe-data/` to `.gitignore`.
+- Added a versioned local JSON store at `.failsafe-data/store.json`.
+- Persisted non-seed runs, regressions, sandbox plans, fixture replay results, and report metadata.
+- Added `POST /demo/reset` and `pnpm failsafe reset-demo-data`.
+- Added Studio reset support in the Safety Card panel.
+
+Implemented notes:
+
+- The API writes only under the app-owned `.failsafe-data` directory.
+- No client-supplied filesystem paths are accepted for persistence.
+- Seed projects, scenario packs, and the seeded demo run remain tracked source data.
 
 ## Phase 4: Patch Coach
 
-Build:
+Status: implemented in the PRD completion pass.
 
-- Finding-to-mitigation mapper.
-- Copilot prompt payload generator.
-- Guardrail pattern library.
-- Regression test generator.
-- Before/after run comparison.
-- Human review checklist.
+- Added shared Patch Coach schemas.
+- Added a finding-to-mitigation mapper and Copilot prompt payload generator.
+- Added `POST /runs/:id/patch-coach`.
+- Added Studio Patch Coach rendering in the Fix with Copilot panel.
+- Added `pnpm failsafe patch-coach <run-id> [finding-id]`.
+- Extended `scripts/dev-check.ts` to validate Patch Coach prompt generation and safety boundaries.
 
-## Phase 5: Demo Polish
+Implemented notes:
 
-Build:
+- Patch Coach generates prompt payloads only.
+- It does not call Copilot, modify files, run tools, or prove a patch worked.
 
-- Five-minute demo flow.
-- Public GitHub repo cleanup.
-- Architecture diagram export.
-- Demo video script.
-- Seed data reset command.
-- Responsive UI polish.
-- README screenshots or GIFs.
+## Phase 5: Reports, CLI Completion, And Demo Polish
 
-## What Each Future Agent Should Build Next
+Status: implemented in the PRD completion pass.
 
-1. Fixture replay agent: turn the Phase 3B plan contract into a reviewed fixture-only replay path using hardcoded synthetic fixtures and no arbitrary execution.
-2. Sandbox agent: after fixture-only replay is proven safe, design a reviewed local sandbox prototype with strict isolation, while keeping dry-run defaults.
-3. Persistence agent: design durable regression storage without changing the mock-only safety defaults.
-4. Patch Coach agent: connect findings to richer Copilot prompt payloads while keeping UI invocation mocked until explicitly promoted.
-5. Safety agent: harden safety policy enforcement and add tests for forbidden live targets.
-6. Demo agent: create a polished five-minute script, screenshots, and presentation outline.
+- Added shared Safety Report schemas.
+- Added `POST /runs/:id/report`, `GET /reports`, and `GET /reports/:id`.
+- Added local Markdown Safety Card export under `.failsafe-data/reports`.
+- Added Studio Safety Card export panel.
+- Added `pnpm failsafe runs`, `pnpm failsafe report <run-id>`, and `pnpm failsafe reports`.
+- Updated README, architecture, demo, and safety docs for the completed local product.
+
+Still future work:
+
+1. Real sandbox isolation with Docker, gVisor, or equivalent.
+2. Live MCP introspection/execution through reviewed mock or fixture adapters.
+3. Optional live model/provider integration behind explicit opt-in config.
+4. Optional Copilot invocation from outside the app through a reviewed workflow.
+5. Browser harnesses, OpenTelemetry export, screenshots/GIFs, and final demo video assets.

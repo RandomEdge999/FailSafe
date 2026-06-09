@@ -3,13 +3,20 @@ import { CreateMockRegressionInputSchema } from "@failsafe/schemas";
 import {
   createMockRegression,
   createSandboxPlanForRegression,
+  getFixtureReplayResultByRegressionId,
   getRegressionById,
+  listFixtureReplayResults,
   listRegressions,
+  replayFixtureRegression,
   replayMockRegression
 } from "../services/regression-service";
 
 export async function registerRegressionRoutes(app: FastifyInstance) {
   app.get("/regressions", async () => listRegressions());
+
+  app.get("/regressions/fixture-replays", async () =>
+    listFixtureReplayResults()
+  );
 
   app.get("/regressions/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
@@ -45,5 +52,22 @@ export async function registerRegressionRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string };
 
     return createSandboxPlanForRegression(id);
+  });
+
+  app.post("/regressions/:id/fixture-replay", async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    return reply.code(201).send(replayFixtureRegression(id));
+  });
+
+  app.get("/regressions/:id/fixture-replay", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const result = getFixtureReplayResultByRegressionId(id);
+
+    if (!result) {
+      return reply.code(404).send({ error: "fixture_replay_not_found", id });
+    }
+
+    return result;
   });
 }
