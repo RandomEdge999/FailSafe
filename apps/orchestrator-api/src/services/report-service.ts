@@ -103,16 +103,25 @@ export function createSafetyReportForRun(
   const relativePath = `${failsafeStorePaths.displayReportsDir}/${reportId}.md`;
   const absolutePath = resolve(failsafeStorePaths.reportsDir, `${reportId}.md`);
   const title = `FailSafe Safety Card - ${project.name}`;
+  const fixtureOnly =
+    run.id.startsWith("run-fixture-") || run.id.startsWith("run-foundry-fixture");
+  const mode = run.id.startsWith("run-foundry-fixture")
+    ? "Foundry fixture replay"
+    : run.id.startsWith("run-foundry")
+      ? "Foundry manifest crash test"
+      : run.baselineRunId
+        ? "Sample Lab replay"
+        : "Sample Lab baseline";
   const safetyBoundaries = [
-    "Synthetic local evidence only.",
+    "Local typed evidence only.",
     "No arbitrary shell, file write, network, MCP, model, email, database, secret, or live target operation was executed.",
     "Copilot output is a prompt handoff for human review, not an automatic patch.",
     "Fixture replay results, when present, use app-owned reviewed fixtures only."
   ];
   const limitations = [
     "This report is not a security certification.",
-    "Scores are product heuristics for selected synthetic crash packs.",
-    "Mock replay and fixture replay do not prove arbitrary runtime isolation.",
+    "Scores are product heuristics for selected defensive crash packs.",
+    "Sample Lab replay, Foundry manifest mode, and fixture replay do not prove arbitrary runtime isolation.",
     "Additional authorized testing is required before production deployment."
   ];
   const content = `# ${title}
@@ -127,9 +136,9 @@ Run: ${run.id}
 Status: ${run.status}
 Score: ${run.score.overall} / 100
 Regression: ${regression?.id ?? "not attached"}
-Mode: ${run.baselineRunId ? "replay" : "baseline mock"}
+Mode: ${mode}
 
-${run.findings.length === 0 ? "The selected replay has no open findings. It remains synthetic fixture evidence, not proof of production safety." : `FailSafe found ${run.findings.length} open finding(s) in this synthetic crash test.`}
+${run.findings.length === 0 ? "The selected replay has no open findings. It remains reviewed local fixture evidence, not proof of production safety." : `FailSafe found ${run.findings.length} open finding(s) in this defensive crash test.`}
 
 ## Findings
 
@@ -174,7 +183,7 @@ ${markdownList(limitations)}
     summary:
       "Local Safety Card generated from typed FailSafe run evidence and written to the app-owned store.",
     mockOnly: true,
-    fixtureOnly: run.id.startsWith("run-fixture-"),
+    fixtureOnly,
     safetyBoundaries,
     limitations
   });

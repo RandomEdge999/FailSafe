@@ -8,7 +8,7 @@ This checklist is the repo-level lock list for preparing FailSafe for a public G
 
 - Product: FailSafe, a local defensive crash-test studio for AI agents.
 - Tagline: Crash-test AI agents before production does.
-- Current product mode: API-backed local Studio with synthetic scenarios, deterministic mock replay, reviewed fixture-only replay, Patch Coach, Safety Card export, and safe CLI.
+- Current product mode: API-backed Crash Lab Studio with reviewed Microsoft Foundry manifest import, agent trust-boundary maps, Foundry manifest crash tests, Foundry fixture replay, Sample Lab scenarios, deterministic replay, reviewed fixture-only replay, Patch Coach, Safety Card export, and safe CLI.
 - Persistence: app-owned `.failsafe-data`, ignored by Git.
 - Protected local context file: `FailSafe_PRD.md`, intentionally untracked and not part of the public repo.
 
@@ -21,6 +21,8 @@ This checklist is the repo-level lock list for preparing FailSafe for a public G
 - [x] Copilot instructions, prompt files, and custom agents are tracked.
 - [x] Safety Card prompt is tracked.
 - [x] Demo screenshots are tracked under `docs/assets/screenshots`.
+- [x] Original generated brand assets are tracked under `docs/assets/brand` and `apps/studio-web/public/brand`.
+- [x] Microsoft Foundry adapter contracts, API routes, CLI commands, and Studio panel are implemented without live tool execution.
 - [x] No live integrations, real credentials, arbitrary execution, deployment infra, or auth are introduced.
 
 ## Local Verification Commands
@@ -39,6 +41,7 @@ Final pass evidence:
 
 - `pnpm install`: passed. Lockfile was up to date.
 - `pnpm check`: passed. Dev check validated scenario packs, seeded run, deterministic engine runs, replay schema, fixture replay, Patch Coach, report schema, comparison schema, runner dry-run policy, sandbox plan, CLI help, readiness artifacts, and safety guardrails. Workspace typechecks passed.
+- Current pass addition: `pnpm check` also validates the Foundry sample manifest, Foundry readiness schema, agent trust-boundary schema, Foundry CLI help, and tracked brand assets.
 - `pnpm build`: passed. All TypeScript packages built and the Next.js Studio production build completed.
 
 ## Required API Smoke
@@ -46,6 +49,12 @@ Final pass evidence:
 Run `pnpm dev:api`, then verify:
 
 - `GET /health`
+- `GET /foundry/readiness`
+- `POST /foundry/manifest/import`
+- `GET /agents`
+- `GET /agents/:id/trust-map`
+- `POST /agents/:id/crash-test`
+- `POST /agents/:id/fixture-replay`
 - `GET /projects`
 - `GET /scenarios`
 - `GET /runs`
@@ -77,6 +86,11 @@ Final pass evidence:
 - Safety report export returned `report-run-demo-tool-poisoning-c790aea4-20260609082136`.
 - Dry-run runner returned `executed: false`.
 - Demo reset returned `mode: local_demo_reset` and reset only app-owned data.
+- Foundry readiness returns manifest-only mode unless optional env vars are configured.
+- Foundry sample import returns a reviewed `microsoft_foundry` manifest with no stored credentials.
+- Agent trust map returns typed user, instruction, tool, identity, and approval boundaries.
+- Foundry crash test returns a persisted local run with trace evidence and findings.
+- Foundry fixture replay returns a persisted passed local run without live tool execution.
 
 ## Required CLI Smoke
 
@@ -95,6 +109,14 @@ pnpm failsafe sandbox fixture-replay <regression-id>
 pnpm failsafe patch-coach <run-id>
 pnpm failsafe report <run-id>
 pnpm failsafe reports
+pnpm failsafe foundry --help
+pnpm failsafe foundry readiness
+pnpm failsafe foundry import-sample
+pnpm failsafe agents
+pnpm failsafe agent --help
+pnpm failsafe agent trust-map <agent-id>
+pnpm failsafe agent crash-test <agent-id>
+pnpm failsafe agent fixture-replay <agent-id>
 pnpm failsafe reset-demo-data
 ```
 
@@ -110,6 +132,11 @@ Final pass evidence:
 Run `pnpm dev:api` and `pnpm dev:web`, then verify:
 
 - Scenario packs load.
+- Foundry readiness renders.
+- Reviewed Foundry manifest imports.
+- Agent trust-boundary map renders.
+- Foundry crash test works.
+- Foundry fixture replay works.
 - Seeded timeline and event evidence render.
 - Run Crash Test works.
 - Finding detail opens.
@@ -135,12 +162,15 @@ Final pass evidence:
   - `docs/assets/screenshots/patch-coach.png`
   - `docs/assets/screenshots/fixture-replay-comparison.png`
   - `docs/assets/screenshots/safety-card.png`
+  - `docs/assets/brand/failsafe-logo.png`
+  - `docs/assets/brand/crash-lab-hero.png`
 - Stopped dev servers and confirmed ports `3000` and `4000` were clear.
 
 ## Submission Checklist
 
 - [x] Working project in local repo.
 - [x] Architecture diagram in README and `docs/architecture.md`.
+- [x] Microsoft Foundry adapter and trust-boundary flow documented.
 - [x] Demo script in `docs/demo-script.md`.
 - [x] Screenshots in `docs/assets/screenshots`.
 - [x] Defensive-only safety policy in `docs/safety-policy.md`.
@@ -153,6 +183,7 @@ Final pass evidence:
 
 - Real sandbox isolation with Docker, gVisor, or equivalent.
 - Live MCP execution or introspection.
+- Live Foundry agent execution beyond local opt-in readiness validation.
 - Live model/provider integration.
 - Live Copilot invocation from the app.
 - OpenTelemetry export.
@@ -161,4 +192,4 @@ Final pass evidence:
 
 ## Safety Lock
 
-FailSafe remains defensive, local, synthetic, typed, and reviewed. Mock replay and fixture replay are evidence for local product behavior only. They are not security certification, arbitrary sandbox execution, or proof that a real patched agent is safe.
+FailSafe remains defensive, local, typed, and reviewed. Foundry manifest mode, Sample Lab replay, and fixture replay are evidence for local product behavior only. They are not security certification, arbitrary sandbox execution, live Foundry execution, or proof that a real patched agent is safe.

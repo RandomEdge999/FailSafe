@@ -37,7 +37,7 @@ export function RegressionPanel({
       {regressions.length === 0 ? (
         <EmptyState
           title="No regressions saved"
-          body="Save a completed mock run to create a persisted local regression artifact."
+          body="Save a completed crash-test run to create a persisted local regression artifact."
         />
       ) : (
         <div className="space-y-3">

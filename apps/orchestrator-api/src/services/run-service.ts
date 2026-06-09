@@ -16,8 +16,8 @@ import {
   type ScenarioRun
 } from "@failsafe/schemas";
 import { randomUUID } from "node:crypto";
+import { mockProjects } from "../data/mock-projects";
 import { mockRuns } from "../data/mock-runs";
-import { getProjectById } from "./project-service";
 import { getScenarioById } from "./scenario-service";
 import {
   loadPersistedStore,
@@ -73,6 +73,11 @@ function persistCurrentRuns() {
   );
 }
 
+export function storeCompletedRunRecord(record: StoredRunRecord) {
+  storedRuns.set(record.run.id, record);
+  persistCurrentRuns();
+}
+
 export function resetRunState() {
   storedRuns.clear();
 
@@ -96,7 +101,7 @@ function runSlug(value: string) {
 }
 
 function resolveRunContext(input: CreateMockRunInput) {
-  const project = getProjectById(input.projectId);
+  const project = mockProjects.find((item) => item.id === input.projectId);
 
   if (!project) {
     throw requestError(
@@ -257,7 +262,7 @@ export function createMockReplayRun(regression: RegressionArtifact) {
     );
   }
 
-  const project = getProjectById(regression.projectId);
+  const project = mockProjects.find((item) => item.id === regression.projectId);
 
   if (!project) {
     throw requestError(
@@ -328,7 +333,7 @@ export function createFixtureReplayRun(
     );
   }
 
-  const project = getProjectById(regression.projectId);
+  const project = mockProjects.find((item) => item.id === regression.projectId);
 
   if (!project) {
     throw requestError(

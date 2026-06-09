@@ -2,7 +2,7 @@
 
 Crash-test AI agents before production does.
 
-FailSafe is a visual crash-test studio for AI agents and MCP toolchains. It helps developers import or model an agent project, map tools and trust boundaries, run defensive synthetic scenarios, visualize the failure timeline, score the risk, generate mitigation guidance, save local regression cases, replay deterministic mock and reviewed fixture-only scenarios, compare baseline versus replay evidence, and export a local Safety Card.
+FailSafe is a visual crash-test studio for AI agents and MCP toolchains. It helps developers import a reviewed Microsoft Foundry-style agent manifest or use the local Sample Lab, map tools and trust boundaries, run defensive crash-test scenarios, visualize the failure timeline, score the risk, generate mitigation guidance, save local regression cases, replay deterministic sample and reviewed fixture-only scenarios, compare baseline versus replay evidence, and export a local Safety Card.
 
 ## Problem Statement
 
@@ -30,35 +30,35 @@ FailSafe does not invoke Copilot, edit files, or apply patches from the app. The
 
 ## Core Workflow
 
-1. Import or select an agent project.
+1. Import a reviewed Microsoft Foundry-style agent manifest or select the local Sample Lab.
 2. Detect tools, MCP servers, prompts, trust boundaries, and high-risk actions.
 3. Choose a crash-test scenario pack.
-4. Run a synthetic mock crash test or preview runner policy decisions.
+4. Run a Foundry manifest crash test, reviewed fixture replay, Sample Lab run, or runner policy preview.
 5. Watch the failure timeline.
 6. Review the risk score and root-cause findings.
 7. Generate a bounded Patch Coach mitigation plan.
 8. Use Copilot-oriented prompts to patch the issue.
 9. Save the crash as a regression case.
-10. Rerun deterministic mock or reviewed fixture-only replay.
+10. Rerun deterministic Sample Lab replay or reviewed fixture-only replay.
 11. Export a local Safety Card.
 
 ## Current Product Scope
 
-The current PRD-grade local product includes a runnable API-backed Studio, Fastify orchestrator API, shared Zod schemas, starter defensive scenario packs, deterministic mock scenario engine, reviewed fixture-only replay engine, scoring heuristic, app-owned local persistence in `.failsafe-data`, local regression artifacts, safe mock replay, baseline-vs-replay comparison, reviewed dry-run runner policy preview, reviewed sandbox replay planning, Patch Coach prompt plans, local Markdown Safety Card exports, CLI coverage, Studio runner readiness, sandbox planning, regression, report, Patch Coach, and fixture replay panels, docs, Copilot instructions, prompt files, and custom agent instruction files.
+The current Microsoft-ready local product includes a runnable API-backed Studio, Crash Lab visual identity, generated original brand assets, Fastify orchestrator API, shared Zod schemas, Microsoft Foundry manifest contracts, Foundry readiness checks, reviewed Foundry sample manifest import, agent trust-boundary maps, Foundry manifest crash tests, Foundry fixture replay, starter defensive scenario packs, deterministic Sample Lab scenario engine, reviewed fixture-only replay engine, scoring heuristic, app-owned local persistence in `.failsafe-data`, local regression artifacts, safe replay, baseline-vs-replay comparison, reviewed dry-run runner policy preview, reviewed sandbox replay planning, Patch Coach prompt plans, local Markdown Safety Card exports, CLI coverage, Studio Foundry readiness, runner readiness, sandbox planning, regression, report, Patch Coach, and fixture replay panels, docs, Copilot instructions, prompt files, and custom agent instruction files.
 
-It does not include arbitrary sandbox execution, runtime isolation proof, live LLM calls, live MCP execution, live Copilot invocation, PostgreSQL/Redis infrastructure, queues, authentication, deployment infrastructure, or destructive tool execution. Dry-run runner decisions, sandbox plans, mock replay, fixture replay, and Safety Cards are local defensive evidence only; they are not security certification and do not prove arbitrary untrusted code was isolated.
+It does not include arbitrary sandbox execution, runtime isolation proof, live Foundry agent execution, live LLM calls, live MCP execution, live Copilot invocation, PostgreSQL/Redis infrastructure, queues, authentication, deployment infrastructure, or destructive tool execution. Connected Foundry validation is opt-in environment readiness only in this repo; it does not call Foundry or execute tools. Dry-run runner decisions, sandbox plans, Sample Lab replay, Foundry manifest crash tests, fixture replay, and Safety Cards are local defensive evidence only; they are not security certification and do not prove arbitrary untrusted code was isolated.
 
 ## Architecture Overview
 
 ```txt
-apps/studio-web          Next.js dashboard and mock crash-lab UI
-apps/orchestrator-api    Fastify API for projects, scenarios, runs, findings, regressions, fixture replay, Patch Coach, reports, runner policy preview, and sandbox plan review
+apps/studio-web          Next.js Crash Lab console and Foundry-ready Studio UI
+apps/orchestrator-api    Fastify API for Foundry manifests, agents, projects, scenarios, runs, findings, regressions, fixture replay, Patch Coach, reports, runner policy preview, and sandbox plan review
 packages/schemas         Shared Zod schemas and TypeScript types
 packages/attack-packs    Typed starter defensive scenario packs
-packages/scenario-engine Deterministic synthetic run, finding, trace, replay, fixture replay, comparison, Patch Coach, dry-run policy, and sandbox plan helpers
+packages/scenario-engine Deterministic sample run, finding, trace, replay, fixture replay, comparison, Patch Coach, dry-run policy, and sandbox plan helpers
 packages/scoring-engine  Initial crash-score heuristic
 packages/trace-model     Trace and timeline helpers
-examples/vulnerable-agent Synthetic local target for demos
+examples/vulnerable-agent Local Sample Lab target for offline fallback and tests
 ```
 
 Future targets are Docker or gVisor-style isolation for a reviewed sandbox worker, OpenTelemetry-compatible trace export, Playwright browser harnesses, optional MCP server integration, and optional external persistence when explicitly requested.
@@ -107,7 +107,7 @@ Run the same local readiness command through the package test alias:
 pnpm test
 ```
 
-Run the safe local mock CLI:
+Run the safe local CLI:
 
 ```bash
 pnpm failsafe --help
@@ -117,6 +117,14 @@ pnpm failsafe replay <regression-id>
 pnpm failsafe patch-coach <run-id>
 pnpm failsafe report <run-id>
 pnpm failsafe reports
+pnpm failsafe foundry --help
+pnpm failsafe foundry readiness
+pnpm failsafe foundry import-sample
+pnpm failsafe agents
+pnpm failsafe agent --help
+pnpm failsafe agent trust-map <agent-id>
+pnpm failsafe agent crash-test <agent-id> [scenario-pack-id]
+pnpm failsafe agent fixture-replay <agent-id> [scenario-pack-id]
 pnpm failsafe runner --help
 pnpm failsafe runner preview
 pnpm failsafe sandbox --help
@@ -125,13 +133,13 @@ pnpm failsafe sandbox fixture-replay <regression-id>
 pnpm failsafe reset-demo-data
 ```
 
-The CLI defaults to `http://localhost:4000`. Set `FAILSAFE_API_BASE_URL` to point it at another running FailSafe API. Runs, regressions, reviewed sandbox plans, fixture replay results, and Safety Cards persist in `.failsafe-data`, which is app-owned and git-ignored. `pnpm failsafe runner preview` calls the dry-run policy preview endpoint with synthetic intended actions and prints decisions; it does not execute those actions. `pnpm failsafe sandbox fixture-replay <regression-id>` calls the reviewed fixture-only replay endpoint and prints typed comparison evidence; it does not accept paths, URLs, commands, tools, targets, or external systems from the client.
+The CLI defaults to `http://localhost:4000`. Set `FAILSAFE_API_BASE_URL` to point it at another running FailSafe API. Runs, Foundry imports, regressions, reviewed sandbox plans, fixture replay results, and Safety Cards persist in `.failsafe-data`, which is app-owned and git-ignored. `pnpm failsafe foundry import-sample` imports the app-owned reviewed Foundry manifest and does not accept credentials or paths. `pnpm failsafe agent crash-test <agent-id>` maps the imported manifest into a defensive crash test. `pnpm failsafe runner preview` calls the dry-run policy preview endpoint with synthetic intended actions and prints decisions; it does not execute those actions. `pnpm failsafe sandbox fixture-replay <regression-id>` calls the reviewed fixture-only replay endpoint and prints typed comparison evidence; it does not accept paths, URLs, commands, tools, targets, or external systems from the client.
 
 Default local URLs:
 
 - Studio: http://localhost:3000
 - API health: http://localhost:4000/health
-- Mock scenarios: http://localhost:4000/scenarios
+- Scenarios: http://localhost:4000/scenarios
 
 ## GitHub Readiness
 
@@ -145,13 +153,20 @@ The repo is prepared for public review:
 - `.env.example` contains only local development defaults and commented placeholders for future reviewed integrations.
 - `FailSafe_PRD.md` is a protected local context file and is intentionally not tracked.
 
-## Mock API Endpoints
+## Local API Endpoints
 
-The studio loads data from the Fastify API by default at `http://localhost:4000`. Set `NEXT_PUBLIC_API_BASE_URL` to point the web app at a different mock API origin.
+The studio loads data from the Fastify API by default at `http://localhost:4000`. Set `NEXT_PUBLIC_API_BASE_URL` to point the web app at a different local API origin.
 
-Implemented mock API endpoints:
+Implemented local API endpoints:
 
 - `GET /health`
+- `GET /foundry/readiness`
+- `POST /foundry/manifest/import`
+- `POST /foundry/connected/validate`
+- `GET /agents`
+- `GET /agents/:id/trust-map`
+- `POST /agents/:id/crash-test`
+- `POST /agents/:id/fixture-replay`
 - `GET /projects`
 - `GET /projects/:id`
 - `GET /scenarios`
@@ -177,7 +192,9 @@ Implemented mock API endpoints:
 - `POST /runner/dry-run`
 - `POST /demo/reset`
 
-`POST /runs/mock` accepts:
+`GET /foundry/readiness` returns configured and missing Foundry environment variables, allowed manifest-only operations, blocked operations, and a safety statement. `POST /foundry/manifest/import` imports either the app-owned reviewed sample manifest or a typed reviewed manifest body. It never accepts client file paths or credentials. `GET /agents/:id/trust-map` maps Foundry model, instructions, tools, identity, observability, and approval gates into typed risk boundaries. `POST /agents/:id/crash-test` creates a Foundry manifest run with trace evidence and findings. `POST /agents/:id/fixture-replay` creates a reviewed local fixture replay run with `status: passed`. Neither endpoint executes live tools, MCP servers, shell commands, arbitrary files, email, databases, or external targets.
+
+`POST /runs/mock` remains available for the local Sample Lab fallback and accepts:
 
 ```json
 {
@@ -187,7 +204,7 @@ Implemented mock API endpoints:
 }
 ```
 
-It creates a local persisted mock run that moves from `queued` to `running` to `needs_review` when polled through `GET /runs/:id`.
+It creates a local persisted Sample Lab run that moves from `queued` to `running` to `needs_review` when polled through `GET /runs/:id`.
 
 `POST /regressions/mock` accepts a completed run ID and creates a local persisted mock regression artifact. Artifacts include the agent target ID, deterministic mock seed, source run status, scenario engine version, expected finding categories, expected trace event types, and a local replay endpoint string such as:
 
@@ -213,11 +230,16 @@ POST /regressions/regression-tool-poisoning-pack-tool-poisoning-guardrail-a1b2c3
 
 ## Demo Narrative
 
-Open the studio and show the FailSafe dashboard. The page loads the demo project, starter scenario packs, seeded run, findings, score, trace, and saved regressions from the API. Select a starter pack, click Run Crash Test, and watch the run move through queued and running states before it reaches needs_review. Click timeline events to inspect raw evidence, click finding cards to inspect root cause and mitigations, open Fix with Copilot to generate a typed Patch Coach plan, then Save Regression to create a local regression artifact. Click Replay Mock to rerun the deterministic synthetic scenario, then click Fixture Replay to run the reviewed synthetic fixture-only replay. Show the Baseline vs Replay panel and explain that it compares synthetic evidence only. Export a Safety Card and point out the app-owned `.failsafe-data/reports` path. Optionally run `pnpm failsafe runs`, `pnpm failsafe regressions`, `pnpm failsafe replay <regression-id>`, `pnpm failsafe sandbox fixture-replay <regression-id>`, `pnpm failsafe patch-coach <run-id>`, and `pnpm failsafe report <run-id>` while the API is running to show the same local flows from the CLI.
+Open the studio and show the FailSafe Crash Lab console. Import the reviewed Foundry manifest from the Agent crash-lab panel, show Foundry readiness, and open the generated trust-boundary map. Select a starter pack and run a Foundry manifest crash test. Click timeline events to inspect raw evidence, click finding cards to inspect root cause and mitigations, open Fix with Copilot to generate a typed Patch Coach plan, then Save Regression to create a local regression artifact. Run Foundry Fixture Replay to show a reviewed local replay path without live tool execution. Use the Sample Lab regression controls to demonstrate deterministic replay and Baseline vs Replay evidence. Export a Safety Card and point out the app-owned `.failsafe-data/reports` path. Optionally run `pnpm failsafe foundry readiness`, `pnpm failsafe foundry import-sample`, `pnpm failsafe agents`, `pnpm failsafe agent trust-map <agent-id>`, `pnpm failsafe agent crash-test <agent-id>`, `pnpm failsafe agent fixture-replay <agent-id>`, `pnpm failsafe runs`, `pnpm failsafe regressions`, `pnpm failsafe replay <regression-id>`, `pnpm failsafe sandbox fixture-replay <regression-id>`, `pnpm failsafe patch-coach <run-id>`, and `pnpm failsafe report <run-id>` while the API is running to show the same local flows from the CLI.
 
 ## Demo Assets
 
 The tracked screenshots below are captured from the local Studio and are safe to use in a GitHub README or hackathon submission:
+
+Original generated brand assets:
+
+- `docs/assets/brand/failsafe-logo.png`
+- `docs/assets/brand/crash-lab-hero.png`
 
 ![FailSafe dashboard](docs/assets/screenshots/dashboard.png)
 
@@ -233,7 +255,7 @@ The final demo video and team/member information should be added in the hackatho
 
 ## Safety Disclaimer
 
-FailSafe is defensive-use-only software. This repository uses synthetic examples and local mock agents. Do not use it against unauthorized systems, real secrets, real customer data, or live external targets. Dangerous actions must remain mocked unless an explicitly reviewed sandbox runner is available. Reviewed fixture replay uses synthetic app-owned fixtures only; it does not execute arbitrary code or prove runtime isolation.
+FailSafe is defensive-use-only software. This repository uses reviewed manifests, synthetic examples, app-owned fixtures, and local Sample Lab agents. Do not use it against unauthorized systems, real secrets, real customer data, or live external targets. Dangerous actions must remain blocked unless an explicitly reviewed sandbox runner is available. Reviewed fixture replay uses synthetic app-owned fixtures only; it does not execute arbitrary code or prove runtime isolation.
 
 The current score is an initial product heuristic for demos and prioritization. It is not a formal security standard and must not be presented as a guarantee of safety.
 
@@ -252,20 +274,21 @@ FailSafe preserves these non-negotiable boundaries:
 - No email sending or external database side effects.
 - No credential storage.
 
-All current run, replay, fixture replay, Patch Coach, and report flows are local, synthetic, typed, reviewed, and defensive.
+All current run, replay, fixture replay, Foundry manifest, Patch Coach, and report flows are local, typed, reviewed, and defensive.
 
 ## Known Limitations
 
+- Foundry connected validation checks local environment readiness only; it does not call Foundry or execute a live agent in this repo.
 - Fixture replay is reviewed and synthetic only; it is not arbitrary sandbox execution.
 - Baseline-vs-replay comparison is local evidence only; it is not proof that a real mitigation is production-safe.
 - Patch Coach creates Copilot-ready prompt payloads; it does not apply patches.
 - Safety Cards summarize selected local evidence; they are not certifications.
-- Real sandbox isolation, live MCP integration, live model/provider integration, OpenTelemetry export, auth, deployment infrastructure, and external persistence remain future work.
+- Real sandbox isolation, live Foundry execution, live MCP integration, live model/provider integration, OpenTelemetry export, auth, deployment infrastructure, and external persistence remain future work.
 
 ## Roadmap
 
-- Phase 0: repository foundation, docs, schemas, mock UI, mock API.
-- Phase 1: API-backed mock studio vertical slice with run lifecycle, evidence inspection, Copilot prompt preview, and regression artifacts.
+- Phase 0: repository foundation, docs, schemas, Studio UI, and local API.
+- Phase 1: API-backed crash-lab vertical slice with run lifecycle, evidence inspection, Copilot prompt preview, and regression artifacts.
 - Phase 2: deterministic mock scenario engine and safe mock regression replay API.
 - Phase 2.5: safe mock replay CLI plus baseline-vs-replay comparison endpoint and Studio panel.
 - Phase 3A: reviewed dry-run runner contract, deny-by-default policy preview endpoint, CLI preview, and Studio readiness panel.
@@ -274,3 +297,4 @@ All current run, replay, fixture replay, Patch Coach, and report flows are local
 - Phase 3D: app-owned local persistence and demo reset for runs, regressions, plans, fixture results, and reports.
 - Phase 4: Patch Coach with Copilot prompts, mitigation plans, and regression generation.
 - Phase 5: local Safety Card exports, CLI completion, and demo polish.
+- Phase 6: Crash Lab visual identity, original generated brand assets, Microsoft Foundry manifest adapter, Foundry trust-boundary maps, Foundry crash-test endpoint, Foundry fixture replay endpoint, Foundry CLI commands, and readiness validation.

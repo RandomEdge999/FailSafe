@@ -2,6 +2,10 @@ import {
   CreateMockRegressionInputSchema,
   CreateMockRunInputSchema,
   FindingSchema,
+  FoundryAgentImportInputSchema,
+  FoundryAgentImportSchema,
+  FoundryReadinessResultSchema,
+  AgentTrustBoundaryMapSchema,
   FixtureReplayResultSchema,
   PatchCoachPlanSchema,
   ProjectSchema,
@@ -14,6 +18,10 @@ import {
   type CreateMockRegressionInput,
   type CreateMockRunInput,
   type Finding,
+  type FoundryAgentImport,
+  type FoundryAgentImportInput,
+  type FoundryReadinessResult,
+  type AgentTrustBoundaryMap,
   type FixtureReplayResult,
   type PatchCoachPlan,
   type Project,
@@ -32,7 +40,7 @@ const apiBaseUrl =
 export type ApiHealth = {
   ok: boolean;
   service: string;
-  mode: "mock";
+  mode: "mock" | "local";
   timestamp: string;
 };
 
@@ -66,7 +74,7 @@ async function requestJson<T>(
     });
   } catch (error) {
     throw new ApiClientError(
-      "FailSafe mock API is unavailable. Start both services with pnpm dev.",
+      "FailSafe local API is unavailable. Start both services with pnpm dev.",
       0,
       error
     );
@@ -81,7 +89,7 @@ async function requestJson<T>(
       "message" in payload &&
       typeof payload.message === "string"
         ? payload.message
-        : `Mock API request failed with HTTP ${response.status}.`;
+        : `Local API request failed with HTTP ${response.status}.`;
 
     throw new ApiClientError(message, response.status, payload);
   }
@@ -101,7 +109,7 @@ function parseHealth(value: unknown): ApiHealth {
     return value as ApiHealth;
   }
 
-  throw new ApiClientError("Mock API health response was not valid.", 200, value);
+  throw new ApiClientError("Local API health response was not valid.", 200, value);
 }
 
 export function getHealth() {
@@ -110,6 +118,69 @@ export function getHealth() {
 
 export function listProjects(): Promise<Project[]> {
   return requestJson("/projects", (value) => ProjectSchema.array().parse(value));
+}
+
+export function getFoundryReadiness(): Promise<FoundryReadinessResult> {
+  return requestJson("/foundry/readiness", (value) =>
+    FoundryReadinessResultSchema.parse(value)
+  );
+}
+
+export function importFoundryManifest(
+  input: FoundryAgentImportInput
+): Promise<FoundryAgentImport> {
+  const body = FoundryAgentImportInputSchema.parse(input);
+
+  return requestJson(
+    "/foundry/manifest/import",
+    (value) => FoundryAgentImportSchema.parse(value),
+    {
+      body: JSON.stringify(body),
+      method: "POST"
+    }
+  );
+}
+
+export function listAgents(): Promise<FoundryAgentImport[]> {
+  return requestJson("/agents", (value) =>
+    FoundryAgentImportSchema.array().parse(value)
+  );
+}
+
+export function getAgentTrustMap(
+  id: string
+): Promise<AgentTrustBoundaryMap> {
+  return requestJson(`/agents/${id}/trust-map`, (value) =>
+    AgentTrustBoundaryMapSchema.parse(value)
+  );
+}
+
+export function runAgentCrashTest(
+  id: string,
+  scenarioPackId?: string
+): Promise<ScenarioRun> {
+  return requestJson(
+    `/agents/${id}/crash-test`,
+    (value) => ScenarioRunSchema.parse(value),
+    {
+      body: JSON.stringify({ scenarioPackId }),
+      method: "POST"
+    }
+  );
+}
+
+export function runAgentFixtureReplay(
+  id: string,
+  scenarioPackId?: string
+): Promise<ScenarioRun> {
+  return requestJson(
+    `/agents/${id}/fixture-replay`,
+    (value) => ScenarioRunSchema.parse(value),
+    {
+      body: JSON.stringify({ scenarioPackId }),
+      method: "POST"
+    }
+  );
 }
 
 export function getProject(id: string): Promise<Project> {

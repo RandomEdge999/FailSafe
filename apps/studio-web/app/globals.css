@@ -20,8 +20,13 @@ body {
   min-height: 100vh;
   margin: 0;
   background:
-    radial-gradient(circle at top left, rgba(0, 166, 166, 0.16), transparent 34rem),
-    linear-gradient(135deg, #121417 0%, #1b2028 48%, #191d24 100%);
+    linear-gradient(rgba(13, 22, 29, 0.82), rgba(13, 22, 29, 0.94)),
+    url("/brand/crash-lab-hero.png"),
+    radial-gradient(circle at top left, rgba(0, 166, 166, 0.18), transparent 34rem),
+    linear-gradient(135deg, #0b1117 0%, #18202a 52%, #111820 100%);
+  background-attachment: fixed, fixed, fixed, fixed;
+  background-position: center top, center top, top left, center;
+  background-size: cover, cover, auto, cover;
   color: #f4f7fb;
   font-family:
     Inter,

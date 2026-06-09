@@ -1,10 +1,12 @@
 import {
   FixtureReplayResultSchema,
+  FoundryAgentImportSchema,
   RegressionArtifactSchema,
   SafetyReportSchema,
   SandboxReplayPlanSchema,
   ScenarioRunSchema,
   type FixtureReplayResult,
+  type FoundryAgentImport,
   type RegressionArtifact,
   type SafetyReport,
   type SandboxReplayPlan,
@@ -31,7 +33,7 @@ const storePath = resolve(storeDir, "store.json");
 
 export type StoredRunRecord = {
   createdAtMs: number;
-  lifecycle: "mock" | "fixture_replay";
+  lifecycle: "mock" | "fixture_replay" | "foundry_manifest" | "foundry_connected";
   run: ScenarioRun;
   seed: string;
   scenarioVersion: string;
@@ -45,6 +47,7 @@ export type PersistedStore = {
   sandboxPlans: SandboxReplayPlan[];
   fixtureReplayResults: FixtureReplayResult[];
   reports: SafetyReport[];
+  foundryImports: FoundryAgentImport[];
 };
 
 export const failsafeStorePaths = {
@@ -63,7 +66,8 @@ function emptyStore(): PersistedStore {
     regressions: [],
     sandboxPlans: [],
     fixtureReplayResults: [],
-    reports: []
+    reports: [],
+    foundryImports: []
   };
 }
 
@@ -78,7 +82,12 @@ function parseRunRecord(value: unknown): StoredRunRecord {
 
   const lifecycle = value.lifecycle;
 
-  if (lifecycle !== "mock" && lifecycle !== "fixture_replay") {
+  if (
+    lifecycle !== "mock" &&
+    lifecycle !== "fixture_replay" &&
+    lifecycle !== "foundry_manifest" &&
+    lifecycle !== "foundry_connected"
+  ) {
     throw new Error(`Unsupported persisted run lifecycle: ${String(lifecycle)}.`);
   }
 
@@ -129,6 +138,9 @@ function parseStore(value: unknown): PersistedStore {
       : [],
     reports: Array.isArray(value.reports)
       ? SafetyReportSchema.array().parse(value.reports)
+      : [],
+    foundryImports: Array.isArray(value.foundryImports)
+      ? FoundryAgentImportSchema.array().parse(value.foundryImports)
       : []
   };
 }
@@ -186,6 +198,10 @@ export function persistFixtureReplayResults(results: FixtureReplayResult[]) {
 
 export function persistReports(reports: SafetyReport[]) {
   updatePersistedStore((store) => ({ ...store, reports }));
+}
+
+export function persistFoundryImports(imports: FoundryAgentImport[]) {
+  updatePersistedStore((store) => ({ ...store, foundryImports: imports }));
 }
 
 export function resetPersistedStore() {

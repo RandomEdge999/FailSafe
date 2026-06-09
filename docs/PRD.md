@@ -147,7 +147,7 @@ The result is clamped between 0 and 100. This is not a formal security standard.
 - `pnpm install` succeeds.
 - `pnpm dev` starts frontend and backend.
 - Frontend renders the FailSafe Studio mock dashboard.
-- Backend returns mock API responses.
+- Backend returns typed local API responses.
 - Shared schemas typecheck.
 - Attack packs exist as typed mock objects.
 - Scoring engine works with mock data.

@@ -103,7 +103,7 @@ export function createMockRegression(input: CreateMockRegressionInput) {
 
   if (run.status === "queued" || run.status === "running") {
     const error = new Error(
-      `Run ${input.runId} is still ${run.status}; wait for the mock lifecycle to finish.`
+      `Run ${input.runId} is still ${run.status}; wait for the local lifecycle to finish.`
     );
     Object.assign(error, { code: "run_not_complete", statusCode: 409 });
     throw error;
@@ -119,6 +119,9 @@ export function createMockRegression(input: CreateMockRegressionInput) {
       ? input.traceEventIds
       : run.trace.map((event) => event.id);
   const replayContext = getRunReplayContext(run.id);
+  const mockReplayable =
+    replayContext?.scenarioVersion === undefined ||
+    replayContext.scenarioVersion.startsWith("mock-");
   const expectedFindingCategories = run.findings
     .filter((finding) => findingIds.includes(finding.id))
     .map((finding) => finding.category);
@@ -145,16 +148,18 @@ export function createMockRegression(input: CreateMockRegressionInput) {
       replayContext?.seed ??
       `${run.projectId}:${run.agentTargetId}:${run.scenarioPackId}:${run.id}`,
     sourceRunStatus: replayContext?.sourceRunStatus ?? run.status,
-    mockReplayable: true,
+    mockReplayable,
     scenarioVersion: replayContext?.scenarioVersion ?? "mock-scenario-engine-v1",
     findingIds,
     name: baseName,
     description:
       input.description ??
-      `Mock regression artifact saved from ${run.id}. It captures synthetic trace evidence and expected safe behavior for future replay wiring.`,
+      `${mockReplayable ? "Sample lab" : "Foundry manifest"} regression artifact saved from ${run.id}. It captures reviewed trace evidence and expected safe behavior for future replay wiring.`,
     createdAt: new Date().toISOString(),
     status: "mock_saved",
-    replayCommand: `POST /regressions/${id}/replay-mock`,
+    replayCommand: mockReplayable
+      ? `POST /regressions/${id}/replay-mock`
+      : `POST /agents/{agent-import-id}/fixture-replay`,
     expectedSafeBehavior: scenarioPack?.expectedSafeBehavior ?? [
       "Keep dangerous actions mocked until a reviewed sandbox runner exists."
     ],

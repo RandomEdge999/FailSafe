@@ -10,11 +10,27 @@ Do not commit, paste, upload, or run tests with real secrets, tokens, customer d
 
 ## No Live Unauthorized Targets
 
-FailSafe scenarios must not target live external systems without explicit authorization. The foundation project uses synthetic local examples only.
+FailSafe scenarios must not target live external systems without explicit authorization. The current project uses reviewed Microsoft Foundry-style manifests, app-owned fixtures, and synthetic local examples only.
 
 ## No Destructive Tool Execution in Demo Mode
 
-Demo mode must not perform destructive file, shell, email, network, database, or account actions. High-risk actions must remain mocked or blocked.
+Local mode must not perform destructive file, shell, email, network, database, or account actions. High-risk actions must remain modeled, reviewed, or blocked.
+
+## Microsoft Foundry Adapter
+
+The Foundry adapter is a reviewed manifest and readiness layer by default.
+
+Current Foundry policy:
+
+- `GET /foundry/readiness` may inspect local environment variable presence only.
+- `POST /foundry/manifest/import` may accept a typed manifest body or the app-owned sample manifest. It must not accept client-provided file paths.
+- Foundry manifests must not contain credentials, secrets, customer data, or live tool payloads.
+- `GET /agents/:id/trust-map` may map reviewed model, instruction, tool, identity, observability, and approval metadata into local evidence.
+- `POST /agents/:id/crash-test` may create typed local trace evidence and findings from reviewed manifest metadata.
+- `POST /agents/:id/fixture-replay` may create reviewed local fixture evidence.
+- No route may execute Foundry tools, MCP servers, shell commands, arbitrary files, email, databases, code interpreter, browser automation, or live external target tests.
+
+Connected Foundry validation remains opt-in environment readiness in this repository. Do not add live Foundry calls unless the authorization model, credential handling, tool-disable policy, telemetry, and user approval gates are explicitly reviewed.
 
 ## App-Owned Local Persistence
 
@@ -22,7 +38,7 @@ FailSafe may persist local demo evidence only under the app-owned `.failsafe-dat
 
 Current persistence policy:
 
-- Non-seed runs, regressions, sandbox plans, fixture replay results, and report metadata can be stored in `.failsafe-data/store.json`.
+- Non-seed runs, Foundry imports, regressions, sandbox plans, fixture replay results, and report metadata can be stored in `.failsafe-data/store.json`.
 - Markdown Safety Cards can be written to `.failsafe-data/reports`.
 - `POST /demo/reset` may reset only `.failsafe-data` state.
 - No source files, arbitrary user paths, secrets, external databases, shell commands, or network resources may be touched by persistence flows.
@@ -69,15 +85,16 @@ Patch Coach may generate Copilot-ready prompt payloads, mitigation steps, and re
 
 Safety Cards may summarize typed local run evidence and write Markdown under `.failsafe-data/reports`. They must state limitations and must not claim certification, full coverage, or real mitigation proof.
 
-## Synthetic Examples Only
+## Reviewed Fixtures And Samples Only
 
-Starter scenario packs must use synthetic examples:
+Starter scenario packs and local fixtures must use synthetic or reviewed sample examples:
 
 - Fake invoices.
 - Fake tool metadata.
 - Fake approval requests.
 - Mock MCP servers.
 - Mock agent targets.
+- Reviewed Microsoft Foundry-style sample manifests with no credentials.
 
 Scenario packs must not include real exploit deployment steps or instructions for attacking real systems.
 

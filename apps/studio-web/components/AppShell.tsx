@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   Finding,
+  FoundryAgentImport,
+  FoundryReadinessResult,
+  AgentTrustBoundaryMap,
   FixtureReplayResult,
   PatchCoachPlan,
   Project,
@@ -15,6 +18,7 @@ import type {
 } from "@failsafe/schemas";
 import type { ReplayComparison } from "@failsafe/schemas";
 import { AlertTriangle, Loader2, RefreshCcw } from "lucide-react";
+import { AgentOpsPanel } from "./AgentOpsPanel";
 import { CopilotPromptPanel } from "./CopilotPromptPanel";
 import { CrashTimeline } from "./CrashTimeline";
 import { DashboardHeader } from "./DashboardHeader";
@@ -34,13 +38,19 @@ import {
   createSandboxPlan,
   createSafetyReport,
   createMockRun,
+  getAgentTrustMap,
+  getFoundryReadiness,
   getHealth,
   getRun,
   getRunComparison,
+  importFoundryManifest,
+  listAgents,
   listProjects,
   listRegressions,
   listRuns,
   listScenarios,
+  runAgentCrashTest,
+  runAgentFixtureReplay,
   replayFixtureRegression,
   replayMockRegression,
   resetDemoData,
@@ -50,7 +60,7 @@ import {
 function formatError(error: unknown) {
   return error instanceof Error
     ? error.message
-    : "FailSafe mock API hit an unexpected error.";
+    : "FailSafe local API hit an unexpected error.";
 }
 
 function delay(ms: number) {
@@ -72,7 +82,7 @@ function regressionName(
   if (!finding) {
     return selectedPack
       ? `${selectedPack.name}: full trace regression`
-      : "FailSafe mock trace regression";
+      : "FailSafe trace regression";
   }
 
   return `${selectedPack?.name ?? "Synthetic scenario"}: ${finding.category.replaceAll("_", " ")} guardrail`;
@@ -80,6 +90,11 @@ function regressionName(
 
 export function AppShell() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [agents, setAgents] = useState<FoundryAgentImport[]>([]);
+  const [foundryReadiness, setFoundryReadiness] =
+    useState<FoundryReadinessResult | null>(null);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>();
+  const [trustMap, setTrustMap] = useState<AgentTrustBoundaryMap | null>(null);
   const [scenarioPacks, setScenarioPacks] = useState<ScenarioPack[]>([]);
   const [currentRun, setCurrentRun] = useState<ScenarioRun | null>(null);
   const [regressions, setRegressions] = useState<RegressionArtifact[]>([]);
@@ -129,8 +144,14 @@ export function AppShell() {
   const [reportError, setReportError] = useState<string | null>(null);
   const [isResettingDemoData, setIsResettingDemoData] = useState(false);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
+  const [agentError, setAgentError] = useState<string | null>(null);
+  const [isImportingAgent, setIsImportingAgent] = useState(false);
+  const [isRunningAgent, setIsRunningAgent] = useState(false);
+  const [isRunningAgentFixture, setIsRunningAgentFixture] = useState(false);
 
   const project = projects[0] ?? null;
+  const selectedAgent =
+    agents.find((agent) => agent.id === selectedAgentId) ?? agents[0] ?? null;
   const selectedPack = useMemo(
     () =>
       scenarioPacks.find((pack) => pack.id === selectedPackId) ??
@@ -212,14 +233,27 @@ export function AppShell() {
 
     try {
       await getHealth();
-      const [loadedProjects, loadedScenarios, loadedRuns, loadedRegressions] =
+      const [
+        loadedReadiness,
+        loadedAgents,
+        loadedProjects,
+        loadedScenarios,
+        loadedRuns,
+        loadedRegressions
+      ] =
         await Promise.all([
+          getFoundryReadiness(),
+          listAgents(),
           listProjects(),
           listScenarios(),
           listRuns(),
           listRegressions()
         ]);
 
+      setFoundryReadiness(loadedReadiness);
+      setAgents(loadedAgents);
+      const nextAgentId = selectedAgentId ?? loadedAgents[0]?.id;
+      setSelectedAgentId(nextAgentId);
       setProjects(loadedProjects);
       setScenarioPacks(loadedScenarios);
       setRegressions(loadedRegressions);
@@ -234,12 +268,18 @@ export function AppShell() {
         setSelectedEventId(undefined);
         setSelectedFindingId(undefined);
       }
+
+      if (nextAgentId) {
+        setTrustMap(await getAgentTrustMap(nextAgentId));
+      } else {
+        setTrustMap(null);
+      }
     } catch (error) {
       setLoadError(formatError(error));
     } finally {
       setIsLoading(false);
     }
-  }, [applyRun]);
+  }, [applyRun, selectedAgentId]);
 
   useEffect(() => {
     void loadStudioData();
@@ -265,11 +305,13 @@ export function AppShell() {
     setIsRunning(true);
 
     try {
-      const createdRun = await createMockRun({
-        projectId: project.id,
-        scenarioPackId: selectedPack.id,
-        agentTargetId: project.agentTargets[0]?.id
-      });
+      const createdRun = selectedAgent
+        ? await runAgentCrashTest(selectedAgent.id, selectedPack.id)
+        : await createMockRun({
+            projectId: project.id,
+            scenarioPackId: selectedPack.id,
+            agentTargetId: project.agentTargets[0]?.id
+          });
 
       applyRun(createdRun);
 
@@ -283,6 +325,97 @@ export function AppShell() {
       setActionError(formatError(error));
     } finally {
       setIsRunning(false);
+    }
+  }
+
+  async function handleImportFoundrySample() {
+    setAgentError(null);
+    setIsImportingAgent(true);
+
+    try {
+      const imported = await importFoundryManifest({ source: "sample" });
+      const [loadedAgents, loadedProjects, loadedTrustMap] = await Promise.all([
+        listAgents(),
+        listProjects(),
+        getAgentTrustMap(imported.id)
+      ]);
+
+      setAgents(loadedAgents);
+      setProjects(loadedProjects);
+      setSelectedAgentId(imported.id);
+      setTrustMap(loadedTrustMap);
+    } catch (error) {
+      setAgentError(formatError(error));
+    } finally {
+      setIsImportingAgent(false);
+    }
+  }
+
+  async function handleSelectAgent(id: string) {
+    setAgentError(null);
+    setSelectedAgentId(id);
+
+    try {
+      setTrustMap(await getAgentTrustMap(id));
+    } catch (error) {
+      setTrustMap(null);
+      setAgentError(formatError(error));
+    }
+  }
+
+  async function handleRunFoundryCrashTest() {
+    if (!selectedAgent || !selectedPack) {
+      return;
+    }
+
+    setAgentError(null);
+    setShowCopilotPanel(false);
+    setPatchCoachPlan(null);
+    setPatchCoachError(null);
+    setSafetyReport(null);
+    setReportError(null);
+    setFixtureReplayResult(null);
+    setReplayComparison(null);
+    setComparisonError(null);
+    setSandboxPlan(null);
+    setSandboxPlanError(null);
+    setIsRunningAgent(true);
+
+    try {
+      applyRun(await runAgentCrashTest(selectedAgent.id, selectedPack.id));
+      setProjects(await listProjects());
+    } catch (error) {
+      setAgentError(formatError(error));
+    } finally {
+      setIsRunningAgent(false);
+    }
+  }
+
+  async function handleRunFoundryFixtureReplay() {
+    if (!selectedAgent || !selectedPack) {
+      return;
+    }
+
+    setAgentError(null);
+    setShowCopilotPanel(false);
+    setPatchCoachPlan(null);
+    setPatchCoachError(null);
+    setSafetyReport(null);
+    setReportError(null);
+    setFixtureReplayResult(null);
+    setReplayComparison(null);
+    setComparisonError(null);
+    setSandboxPlan(null);
+    setSandboxPlanError(null);
+    setIsRunningAgentFixture(true);
+
+    try {
+      applyRun(await runAgentFixtureReplay(selectedAgent.id, selectedPack.id));
+      setProjects(await listProjects());
+    } catch (error) {
+      setAgentError(formatError(error));
+    } finally {
+      setIsRunningAgentFixture(false);
     }
   }
 
@@ -453,6 +586,9 @@ export function AppShell() {
       setPatchCoachPlan(null);
       setPatchCoachError(null);
       setSafetyReport(null);
+      setAgents([]);
+      setSelectedAgentId(undefined);
+      setTrustMap(null);
       setFixtureReplayResult(null);
       setReplayComparison(null);
       setComparisonError(null);
@@ -473,7 +609,7 @@ export function AppShell() {
   const header = (
     <DashboardHeader
       canFix={Boolean(selectedFinding)}
-      canRun={Boolean(project && selectedPack)}
+      canRun={Boolean((project || selectedAgent) && selectedPack)}
       canSave={terminalRunReady(currentRun)}
       isRunning={isRunning}
       isSavingRegression={isSavingRegression}
@@ -497,8 +633,8 @@ export function AppShell() {
                   Loading FailSafe Studio
                 </p>
                 <p className="mt-1 text-sm text-slate-300">
-                  Fetching projects, scenarios, runs, findings, and saved mock
-                  regressions from the orchestrator API.
+                  Fetching Foundry readiness, projects, scenarios, runs,
+                  findings, and saved regressions from the orchestrator API.
                 </p>
               </div>
             </div>
@@ -518,10 +654,10 @@ export function AppShell() {
               <AlertTriangle className="h-6 w-6 shrink-0 text-danger" />
               <div className="min-w-0">
                 <p className="text-sm font-semibold uppercase text-danger">
-                  Mock API unavailable
+                  Local API unavailable
                 </p>
                 <h2 className="mt-2 text-xl font-semibold text-white">
-                  The API-backed demo flow could not load.
+                  The API-backed crash-lab flow could not load.
                 </h2>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
                   {loadError} Run <code className="text-signal">pnpm dev</code>{" "}
@@ -550,8 +686,8 @@ export function AppShell() {
         {header}
         <div className="mx-auto w-full max-w-[1600px] px-5 py-5 md:px-8">
           <EmptyState
-            title="No mock studio data loaded"
-            body="The API responded, but the expected demo project or starter scenario packs were missing."
+            title="No crash-lab data loaded"
+            body="The API responded, but the expected projects or starter scenario packs were missing."
           />
         </div>
       </main>
@@ -567,7 +703,7 @@ export function AppShell() {
         <div className="mx-auto w-full max-w-[1600px] px-5 py-5 md:px-8">
           <EmptyState
             title="No selected scenario"
-            body="The API returned starter packs, but FailSafe could not select an active mock scenario."
+            body="The API returned starter packs, but FailSafe could not select an active scenario."
           />
         </div>
       </main>
@@ -587,6 +723,21 @@ export function AppShell() {
           }}
         />
         <div className="space-y-5">
+          <AgentOpsPanel
+            agents={agents}
+            readiness={foundryReadiness}
+            selectedAgentId={selectedAgent?.id}
+            selectedPack={activePack}
+            trustMap={trustMap}
+            isImporting={isImportingAgent}
+            isRunning={isRunningAgent}
+            isFixtureReplaying={isRunningAgentFixture}
+            error={agentError}
+            onImportSample={() => void handleImportFoundrySample()}
+            onSelectAgent={(id) => void handleSelectAgent(id)}
+            onRunCrashTest={() => void handleRunFoundryCrashTest()}
+            onRunFixtureReplay={() => void handleRunFoundryFixtureReplay()}
+          />
           {actionError ? (
             <div className="rounded-lg border border-danger/30 bg-danger/10 p-4 text-sm leading-6 text-slate-200">
               {actionError}
@@ -602,7 +753,7 @@ export function AppShell() {
           ) : (
             <EmptyState
               title="No score loaded"
-              body="Run a starter pack to load the mock scorecard from the API."
+              body="Run a crash test to load the scorecard from the API."
             />
           )}
           <section className="space-y-3">
@@ -631,7 +782,7 @@ export function AppShell() {
                 title="No findings yet"
                 body={
                   isRunInProgress(currentRun)
-                    ? "The mock lifecycle is still running. Findings appear when the API completes the synthetic scenario."
+                    ? "The local lifecycle is still running. Findings appear when the API completes the scenario."
                     : "A clean run will still save trace evidence for future regression checks."
                 }
               />

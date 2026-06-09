@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { registerDemoRoutes } from "./routes/demo";
 import { registerFindingRoutes } from "./routes/findings";
 import { registerHealthRoutes } from "./routes/health";
+import { registerFoundryRoutes } from "./routes/foundry";
 import { registerProjectRoutes } from "./routes/projects";
 import { registerRegressionRoutes } from "./routes/regressions";
 import { registerReportRoutes } from "./routes/reports";
@@ -24,6 +25,7 @@ export async function buildServer() {
   });
 
   await registerHealthRoutes(app);
+  await registerFoundryRoutes(app);
   await registerProjectRoutes(app);
   await registerScenarioRoutes(app);
   await registerRunRoutes(app);
@@ -47,7 +49,7 @@ export async function buildServer() {
         statusCode >= 500 ? "internal_error" : (errorRecord.code ?? "request_error"),
       message:
         statusCode >= 500
-          ? "FailSafe mock API hit an unexpected error."
+          ? "FailSafe local API hit an unexpected error."
           : message
     });
   });

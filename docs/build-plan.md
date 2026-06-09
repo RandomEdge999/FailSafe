@@ -11,13 +11,13 @@ Deliver:
 - Shared Zod schemas.
 - Starter defensive scenario packs.
 - Scoring heuristic.
-- Fastify mock API.
-- Next.js mock studio dashboard.
+- Fastify local API.
+- Next.js Crash Lab Studio dashboard.
 - Example vulnerable-agent target.
 - Documentation system.
 - Copilot instructions, prompt files, and custom agent files.
 
-## Phase 1: Mock Studio Vertical Slice
+## Phase 1: Crash Lab Studio Vertical Slice
 
 Status: implemented in the current Phase 1 pass.
 
@@ -60,7 +60,7 @@ Implemented notes:
 Status: implemented in the current Phase 2.5 pass.
 
 - Added `pnpm failsafe` with `--help`, `replay --help`, `regressions`, and `replay <regression-id>`.
-- CLI replay calls the running mock API, polls the replay run with a bounded timeout, and prints a concise mock-only summary.
+- CLI replay calls the running local API, polls the replay run with a bounded timeout, and prints a concise Sample Lab summary.
 - CLI supports `FAILSAFE_API_BASE_URL` and fails with actionable text when the API is unavailable.
 - Added shared `ReplayComparison` schema.
 - Added deterministic `compareMockReplayRuns` helper in `packages/scenario-engine`.
@@ -195,10 +195,30 @@ Status: implemented in the PRD completion pass.
 - Added `pnpm failsafe runs`, `pnpm failsafe report <run-id>`, and `pnpm failsafe reports`.
 - Updated README, architecture, demo, and safety docs for the completed local product.
 
+## Phase 6: Microsoft-Ready Foundry Adapter And Crash Lab Identity
+
+Status: implemented in the Microsoft-ready pass.
+
+- Added shared Microsoft Foundry manifest, readiness, import, and agent trust-boundary schemas.
+- Added reviewed app-owned Foundry sample manifest with model, instructions, tools, identity/RBAC, observability, runtime, and review metadata.
+- Added `GET /foundry/readiness`, `POST /foundry/manifest/import`, `POST /foundry/connected/validate`, `GET /agents`, `GET /agents/:id/trust-map`, `POST /agents/:id/crash-test`, and `POST /agents/:id/fixture-replay`.
+- Added safe CLI commands for Foundry readiness, sample import, agent listing, trust maps, agent crash tests, and agent fixture replay.
+- Added Studio Agent crash-lab console with Foundry readiness, reviewed manifest import, trust-boundary preview, Foundry crash-test action, and Foundry fixture replay action.
+- Added original generated FailSafe logo and Crash Lab hero assets under `apps/studio-web/public/brand` and `docs/assets/brand`.
+- Updated README, architecture, design, demo script, safety policy, and final lock list for Microsoft Foundry alignment.
+- Extended `scripts/dev-check.ts` to validate Foundry contracts, CLI help, safety statements, and brand assets.
+
+Implemented notes:
+
+- Foundry manifest mode does not store credentials.
+- Connected validation checks local environment readiness only and does not call Foundry.
+- Agent crash tests and fixture replay create typed local evidence without live tools, MCP servers, shell commands, arbitrary file reads/writes, email, databases, or external target testing.
+
 Still future work:
 
 1. Real sandbox isolation with Docker, gVisor, or equivalent.
-2. Live MCP introspection/execution through reviewed mock or fixture adapters.
-3. Optional live model/provider integration behind explicit opt-in config.
-4. Optional Copilot invocation from outside the app through a reviewed workflow.
-5. Browser harnesses, OpenTelemetry export, optional GIFs, and final demo video assets.
+2. Live Foundry execution through a reviewed no-tool adapter.
+3. Live MCP introspection/execution through reviewed mock or fixture adapters.
+4. Optional live model/provider integration behind explicit opt-in config.
+5. Optional Copilot invocation from outside the app through a reviewed workflow.
+6. Browser harnesses, OpenTelemetry export, optional GIFs, and final demo video assets.

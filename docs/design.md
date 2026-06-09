@@ -2,9 +2,11 @@
 
 ## Product Feel
 
-FailSafe should feel like a crash lab for AI agents: precise, visual, serious, and fast to understand. The interface should make invisible reasoning failures tangible without becoming a generic security dashboard.
+FailSafe should feel like a crash lab for AI agents: precise, visual, serious, and fast to understand. The interface should make invisible reasoning failures tangible without becoming a generic security dashboard or a stock AI landing page.
 
-The product tone is pragmatic and evidence-driven. It should help builders understand what happened, why it matters, and what to do next.
+The visual direction is an original Crash Lab identity: dark instrument panels, generated FailSafe shield/impact imagery, cyan safety signals, amber hazard accents, and dense operational surfaces. It should feel polished enough for a Microsoft-oriented developer audience without copying Microsoft product marks.
+
+The product tone is pragmatic and evidence-driven. It should help builders understand what happened, why it matters, what Foundry agent boundary was involved, and what to do next.
 
 ## UX Principles
 
@@ -13,6 +15,7 @@ The product tone is pragmatic and evidence-driven. It should help builders under
 - Keep demo actions obvious and reversible.
 - Prefer concrete evidence over abstract warnings.
 - Make Copilot usage visible at the moment a developer needs help.
+- Make Microsoft Foundry alignment visible through manifest import, readiness, trust-boundary maps, identity/RBAC notes, and reviewed fixture replay.
 - Avoid offensive framing. Use defensive scenario language.
 - Keep the first screen useful; no marketing landing page.
 
@@ -21,14 +24,16 @@ The product tone is pragmatic and evidence-driven. It should help builders under
 The dashboard has three primary regions:
 
 - Left: scenario library with starter packs and active selection.
-- Center: crash timeline, scorecard, and finding cards.
-- Right: risk inspector with target, active pack, and current run details.
+- Center: Foundry/agent operations panel, crash timeline, scorecard, and finding cards.
+- Right: risk inspector with target, runner readiness, Safety Card export, sandbox plan, and regression controls.
 
 The header contains the product name, tagline, and primary actions:
 
 - Run Crash Test
 - Fix with Copilot
 - Save Regression
+
+The first screen must show the working Crash Lab console. The generated hero asset can appear as a restrained operational background, but not as a marketing hero that hides the workflow.
 
 ## Crash Timeline Behavior
 
@@ -52,6 +57,13 @@ Future timeline interactions:
 
 ## Risk Inspector Behavior
 
+The agent operations panel should summarize Microsoft Foundry readiness, imported reviewed manifests, selected agent mode, missing optional env vars, blocked operations, trust-boundary count, and high-risk review points. It should offer:
+
+- Import Foundry Manifest
+- Crash-Test Foundry Agent
+- Run Foundry Fixture Replay
+- Trust-boundary map preview
+
 The risk inspector should summarize the active target and explain why the selected pack matters. It should show:
 
 - Agent target count.
@@ -60,9 +72,9 @@ The risk inspector should summarize the active target and explain why the select
 - Approval coverage.
 - Active threat model.
 - Finding count.
-- Mock or sandbox mode.
+- Sample Lab, Foundry manifest, Foundry connected readiness, or fixture replay mode.
 
-The inspector should avoid pretending the product has performed real static analysis until that implementation exists.
+The inspector should avoid pretending the product has performed live Foundry execution or real static analysis. Foundry manifest mode is reviewed modeling and local evidence, not production certification.
 
 ## Safety Score Visualization
 
@@ -118,6 +130,9 @@ Use clear product language:
 - "trust boundary"
 - "approval gate"
 - "synthetic crash test"
+- "Foundry manifest"
+- "reviewed fixture replay"
+- "Sample Lab fallback"
 - "root cause"
 - "regression case"
 
@@ -127,6 +142,7 @@ Avoid:
 - Guarantees of safety.
 - Fear-based copy.
 - Vague "AI magic" language.
+- Claims that FailSafe invoked live Copilot, live Foundry tools, or proved a production mitigation unless that actually happened.
 
 ## Accessibility Notes
 

@@ -2,23 +2,24 @@
 
 ## System Architecture
 
-FailSafe is a TypeScript-first monorepo. The current local product uses a Next.js studio, Fastify orchestrator API, shared Zod schemas, typed scenario packs, a deterministic mock scenario engine, reviewed fixture-only replay, replay comparison helpers, Patch Coach helpers, local Safety Card export, a reviewed dry-run runner policy helper, a reviewed sandbox replay plan helper, scoring helpers, trace helpers, a safe local CLI, app-owned local persistence, and synthetic demo data. The studio loads project, scenario, run, finding, trace, score, regression, mock replay, fixture replay, baseline comparison, Patch Coach, report, and sandbox plan state from the API. Runner readiness is shown as a dry-run contract, fixture replay is synthetic and allowlisted, and real sandbox execution remains future work.
+FailSafe is a TypeScript-first monorepo. The current local product uses a Next.js Crash Lab studio, Fastify orchestrator API, shared Zod schemas, typed scenario packs, a Microsoft Foundry manifest adapter, agent trust-boundary maps, Foundry manifest crash tests, Foundry fixture replay, deterministic Sample Lab execution, reviewed fixture-only replay, replay comparison helpers, Patch Coach helpers, local Safety Card export, a reviewed dry-run runner policy helper, a reviewed sandbox replay plan helper, scoring helpers, trace helpers, a safe local CLI, app-owned local persistence, and reviewed sample data. The studio loads Foundry readiness, imported agents, project, scenario, run, finding, trace, score, regression, replay, baseline comparison, Patch Coach, report, and sandbox plan state from the API. Runner readiness is shown as a dry-run contract, fixture replay is synthetic and allowlisted, and real sandbox execution remains future work.
 
 ```mermaid
 flowchart LR
   User["Developer / Demo User"] --> Studio["studio-web<br/>Next.js UI"]
   User --> CLI["pnpm failsafe<br/>safe local CLI"]
-  Studio --> API["orchestrator-api<br/>Fastify mock API"]
+  Studio --> API["orchestrator-api<br/>Fastify local API"]
   CLI --> API
   API --> Schemas["schemas<br/>Zod contracts"]
   API --> Packs["attack-packs<br/>defensive packs"]
   API --> ScenarioEngine["scenario-engine<br/>deterministic mock execution<br/>fixture replay<br/>Patch Coach<br/>comparison"]
+  API --> Foundry["Foundry adapter<br/>readiness<br/>manifest import<br/>trust map<br/>modeled crash test"]
   API --> RunnerPolicy["dry-run runner policy<br/>deny-by-default preview"]
   API --> SandboxPlan["sandbox replay plan<br/>review-required plan only"]
   API --> Scoring["scoring-engine<br/>heuristic score"]
   API --> Trace["trace-model<br/>timeline helpers"]
   API --> Store["app-owned local store<br/>.failsafe-data"]
-  API --> MockData["seed mock data<br/>projects, scenarios, seeded run"]
+  API --> SampleData["Sample Lab data<br/>projects, scenarios, seeded run<br/>reviewed Foundry manifest"]
   API --> Reports["Safety Card exports<br/>.failsafe-data/reports"]
   FutureRunner["future reviewed sandbox runner"] -.-> API
   FutureStore["optional future external store"] -.-> API
@@ -31,15 +32,15 @@ flowchart LR
 
 ### `apps/studio-web`
 
-Renders the FailSafe Studio dashboard. The current implementation uses a typed API client pointed at `NEXT_PUBLIC_API_BASE_URL` or `http://localhost:4000`. It handles loading, API unavailable, queued, running, completed, no-finding, Copilot preview, saved-regression, replay, baseline-vs-replay comparison, runner-readiness, and reviewed sandbox plan states.
+Renders the FailSafe Crash Lab dashboard. The current implementation uses a typed API client pointed at `NEXT_PUBLIC_API_BASE_URL` or `http://localhost:4000`. It handles Foundry readiness, reviewed manifest import, agent selection, trust-boundary maps, Foundry crash tests, Foundry fixture replay, loading, API unavailable, queued, running, completed, no-finding, Copilot preview, saved-regression, replay, baseline-vs-replay comparison, runner-readiness, and reviewed sandbox plan states.
 
 ### `apps/orchestrator-api`
 
-Owns HTTP routes for health, projects, scenarios, runs, findings, regressions, mock replay, fixture replay, replay comparison, Patch Coach, Safety Card reports, demo reset, dry-run runner policy preview, and reviewed sandbox planning. The API returns seeded mock data and persists non-seed runs, replay runs, regression artifacts, sandbox plans, fixture replay results, and reports in the app-owned `.failsafe-data` store. It owns lifecycle materialization from `queued` to `running` to `needs_review`, while scenario-specific trace, finding, score generation, fixture replay, Patch Coach, comparison helpers, runner policy preview helpers, and sandbox planning helpers live in `packages/scenario-engine`. Future work should add real sandbox dispatch and trace collection from an isolated runner.
+Owns HTTP routes for health, Foundry readiness, Foundry manifest import, agents, trust maps, agent crash tests, agent fixture replay, projects, scenarios, runs, findings, regressions, sample replay, fixture replay, replay comparison, Patch Coach, Safety Card reports, demo reset, dry-run runner policy preview, and reviewed sandbox planning. The API returns seeded Sample Lab data, imports reviewed Foundry manifests, and persists non-seed runs, Foundry imports, replay runs, regression artifacts, sandbox plans, fixture replay results, and reports in the app-owned `.failsafe-data` store. It owns lifecycle materialization from `queued` to `running` to `needs_review`, while deterministic Sample Lab trace, finding, score generation, fixture replay, Patch Coach, comparison helpers, runner policy preview helpers, and sandbox planning helpers live in `packages/scenario-engine`. Future work should add real sandbox dispatch and trace collection from an isolated runner.
 
 ### `packages/schemas`
 
-Defines Zod schemas and TypeScript types for all core entities, including `ReplayComparison`, fixture replay results, Patch Coach plans, Safety Reports, dry-run runner, and reviewed sandbox replay plan contracts used by the API, CLI, dev check, and Studio. This package is the source of truth for data shape across apps and packages.
+Defines Zod schemas and TypeScript types for all core entities, including Microsoft Foundry manifests, Foundry readiness, agent trust-boundary maps, `ReplayComparison`, fixture replay results, Patch Coach plans, Safety Reports, dry-run runner, and reviewed sandbox replay plan contracts used by the API, CLI, dev check, and Studio. This package is the source of truth for data shape across apps and packages.
 
 ### `packages/attack-packs`
 
@@ -51,7 +52,7 @@ Produces deterministic mock scenario executions. Given a project, agent target, 
 
 ### `scripts/failsafe.ts`
 
-Provides the safe local CLI entrypoint exposed as `pnpm failsafe`. It calls the running API for run listing, regression listing, mock replay, reviewed fixture replay, Patch Coach, report export, report listing, demo reset, dry-run runner policy preview, and reviewed sandbox planning. It polls mock replay runs with a bounded timeout and prints concise summaries. It does not read client paths, execute scenario tools, run shell commands, call live LLMs, call MCP servers, invoke Copilot, or contact external systems.
+Provides the safe local CLI entrypoint exposed as `pnpm failsafe`. It calls the running API for Foundry readiness, Foundry sample import, agent listing, trust-boundary maps, Foundry crash tests, Foundry fixture replay, run listing, regression listing, sample replay, reviewed fixture replay, Patch Coach, report export, report listing, demo reset, dry-run runner policy preview, and reviewed sandbox planning. It polls sample replay runs with a bounded timeout and prints concise summaries. It does not read client paths, accept credentials, execute scenario tools, run shell commands, call live LLMs, call MCP servers, invoke Copilot, or contact external systems.
 
 ### `packages/scoring-engine`
 
@@ -63,11 +64,13 @@ Provides trace-event parsing and timeline grouping helpers. Future work can add 
 
 ## Data Flow
 
-1. Studio checks `GET /health`.
-2. Studio loads projects, scenario packs, seeded runs, and regression artifacts from the orchestrator API.
-3. User selects a scenario pack.
-4. Studio starts a synthetic run through `POST /runs/mock`.
-5. Orchestrator creates a persisted local run and materializes `queued`, `running`, and `needs_review` states when `GET /runs/:id` is polled.
+1. Studio checks `GET /health` and `GET /foundry/readiness`.
+2. Studio loads imported agents, projects, scenario packs, seeded runs, and regression artifacts from the orchestrator API.
+3. User imports the reviewed Foundry sample manifest through `POST /foundry/manifest/import` or selects an existing imported agent.
+4. Studio loads a trust-boundary map through `GET /agents/:id/trust-map`.
+5. User selects a scenario pack.
+6. Studio starts a Foundry manifest crash test through `POST /agents/:id/crash-test` or a Sample Lab fallback run through `POST /runs/mock`.
+7. Orchestrator creates a persisted local run and materializes `queued`, `running`, and `needs_review` states when `GET /runs/:id` is polled.
 6. Studio renders timeline events, scorecard factors, and findings from the API response.
 7. User selects a timeline event to inspect metadata and raw evidence.
 8. User selects a finding to inspect root cause, mitigations, and a Copilot prompt preview.
@@ -77,12 +80,25 @@ Provides trace-event parsing and timeline grouping helpers. Future work can add 
 12. Studio calls `GET /runs/:id/comparison` for the replay run. The API follows `baselineRunId`, compares the materialized baseline and replay runs, and returns a typed `ReplayComparison`.
 13. Studio can call `POST /regressions/:id/sandbox-plan` for a saved regression. The API validates the local regression, baseline run, project, scenario pack, and agent target, then returns a typed `SandboxReplayPlan` without arbitrary execution.
 14. Studio can call `POST /regressions/:id/fixture-replay` for a saved regression. The API validates the plan allowlist, creates a fixture-only synthetic replay run, persists a fixture replay result, and returns comparison evidence.
-15. Studio can call `POST /runs/:id/patch-coach` and `POST /runs/:id/report` to generate a Patch Coach plan and app-owned Markdown Safety Card.
+15. Studio can call `POST /agents/:id/fixture-replay` to create reviewed local Foundry fixture evidence without live tool execution.
+16. Studio can call `POST /runs/:id/patch-coach` and `POST /runs/:id/report` to generate a Patch Coach plan and app-owned Markdown Safety Card.
+
+## Microsoft Foundry Adapter Flow
+
+1. A client calls `GET /foundry/readiness` to see whether optional local Foundry environment variables are configured.
+2. A client imports the app-owned reviewed sample manifest with `POST /foundry/manifest/import`.
+3. The API validates the manifest with shared Zod schemas and stores it in `.failsafe-data`.
+4. The API converts the manifest into a FailSafe project surface with a `foundry-agent` target, Foundry tools, MCP metadata boundaries, identity/RBAC notes, and observability hooks.
+5. `GET /agents/:id/trust-map` returns typed boundaries for user input, reviewed instructions, model reasoning, tools, identity, observability, and approval gates.
+6. `POST /agents/:id/crash-test` creates a local trace and root-cause finding from the reviewed manifest and selected defensive scenario pack.
+7. `POST /agents/:id/fixture-replay` creates a passed local fixture replay run from reviewed app-owned evidence.
+
+The Foundry adapter does not store credentials, accept client file paths, execute live Foundry tools, call MCP servers, run shell commands, read arbitrary files, write arbitrary files, send email, query databases, or test external targets.
 
 ## Dry-Run Runner Policy Preview Flow
 
 1. A client submits `POST /runner/dry-run` with `projectId`, `scenarioPackId`, and typed intended actions.
-2. The API validates the request with `RunnerDryRunInputSchema` and checks that the project and scenario pack exist in mock API data.
+2. The API validates the request with `RunnerDryRunInputSchema` and checks that the project and scenario pack exist in local API data.
 3. The API calls the dry-run runner policy helper in `packages/scenario-engine`.
 4. The helper evaluates every action through a deny-by-default policy and returns typed decisions, trace-like evidence, and safety notes.
 5. The result always includes `executed: false` and `dryRunOnly: true`.
@@ -166,9 +182,9 @@ Phase 2 extends the shared `RegressionArtifact` schema with:
 - `expectedTraceEventTypes`
 - `traceEventIds`
 
-Regression artifacts are local persisted mock records in `.failsafe-data`. They do not execute shell replay commands or touch external databases. Replay can be triggered from the Studio or the safe local CLI, and both paths call the same API. `POST /regressions/:id/replay-mock` reruns the deterministic synthetic scenario and never invokes real tools or external systems. `POST /regressions/:id/fixture-replay` creates reviewed fixture-only synthetic replay evidence. `GET /runs/:id/comparison` compares synthetic runs only and must not be described as real mitigation proof.
+Regression artifacts are local persisted records in `.failsafe-data`. Sample Lab artifacts can be deterministic mock-replayed; Foundry manifest artifacts should use the agent fixture-replay path. They do not execute shell replay commands or touch external databases. Replay can be triggered from the Studio or the safe local CLI, and both paths call the same API. `POST /regressions/:id/replay-mock` reruns the deterministic Sample Lab scenario and never invokes real tools or external systems. `POST /regressions/:id/fixture-replay` creates reviewed fixture-only synthetic replay evidence. `GET /runs/:id/comparison` compares synthetic runs only and must not be described as real mitigation proof.
 
-## Mock CLI Flow
+## CLI Flow
 
 `pnpm failsafe runs` calls `GET /runs` and prints current local run summaries.
 
@@ -183,6 +199,8 @@ Regression artifacts are local persisted mock records in `.failsafe-data`. They 
 `pnpm failsafe report <run-id>` calls `POST /runs/:id/report` and prints the app-owned Safety Card path. `pnpm failsafe reports` lists prior report exports.
 
 `pnpm failsafe reset-demo-data` calls `POST /demo/reset` and clears only `.failsafe-data` state.
+
+`pnpm failsafe foundry readiness` calls `GET /foundry/readiness`. `pnpm failsafe foundry import-sample` imports the app-owned reviewed Microsoft Foundry-style manifest. `pnpm failsafe agents` lists imported agents. `pnpm failsafe agent trust-map <agent-id>`, `pnpm failsafe agent crash-test <agent-id>`, and `pnpm failsafe agent fixture-replay <agent-id>` call the corresponding local API routes without accepting credentials or executing live tools.
 
 The CLI defaults to `http://localhost:4000` and supports `FAILSAFE_API_BASE_URL`. It requires a running API process and uses the local app-owned store for persisted artifacts.
 

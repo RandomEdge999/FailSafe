@@ -5,6 +5,7 @@ export const AgentTargetTypeSchema = z.enum([
   "mcp-client",
   "coding-agent",
   "browser-agent",
+  "foundry-agent",
   "mock-agent"
 ]);
 

@@ -94,7 +94,7 @@ export function SandboxPlanPanel({
           <div className="mt-3">
             <EmptyState
               title="No regression available"
-              body="Save a completed mock run before creating a reviewed sandbox plan."
+              body="Save a completed crash-test run before creating a reviewed sandbox plan."
             />
           </div>
         ) : (

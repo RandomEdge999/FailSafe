@@ -4,7 +4,12 @@ import { ProjectSchema } from "./project";
 import { ScenarioRunSchema } from "./run";
 import { ScenarioPackSchema } from "./scenario";
 
-export const ScenarioExecutionModeSchema = z.enum(["mock"]);
+export const ScenarioExecutionModeSchema = z.enum([
+  "mock",
+  "fixture_replay",
+  "foundry_manifest",
+  "foundry_connected"
+]);
 
 export const MockScenarioExecutionInputSchema = z.object({
   project: ProjectSchema,

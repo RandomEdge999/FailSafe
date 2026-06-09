@@ -5,9 +5,9 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: "#121417",
-        panel: "#191d24",
-        rail: "#222832",
+        ink: "#0b1117",
+        panel: "#101820",
+        rail: "#1f2a35",
         signal: "#00a6a6",
         warning: "#f0a202",
         danger: "#e84855",

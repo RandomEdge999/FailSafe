@@ -20,6 +20,10 @@ import {
   RunnerCapabilityManifestSchema,
   RunnerDryRunResultSchema,
   FixtureReplayResultSchema,
+  FoundryAgentImportSchema,
+  FoundryAgentManifestSchema,
+  FoundryReadinessResultSchema,
+  AgentTrustBoundaryMapSchema,
   PatchCoachPlanSchema,
   SafetyReportSchema,
   SandboxReplayPlanSchema,
@@ -32,6 +36,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { mockProjects } from "../apps/orchestrator-api/src/data/mock-projects";
 import { mockRuns } from "../apps/orchestrator-api/src/data/mock-runs";
+import { sampleFoundryManifest } from "../apps/orchestrator-api/src/data/sample-foundry-manifest";
 
 const parsedPacks = ScenarioPackSchema.array().parse(starterAttackPacks);
 const parsedRuns = ScenarioRunSchema.array().parse(mockRuns);
@@ -499,6 +504,94 @@ SafetyReportSchema.parse({
   limitations: ["Not a security certification."]
 });
 
+const foundryManifest = FoundryAgentManifestSchema.parse(sampleFoundryManifest);
+
+if (
+  foundryManifest.provider !== "microsoft_foundry" ||
+  foundryManifest.identity.storesCredentials !== false ||
+  foundryManifest.runtime.toolExecution !== false ||
+  foundryManifest.runtime.mcpExecution !== false ||
+  foundryManifest.runtime.networkAccess !== false
+) {
+  throw new Error("Foundry sample manifest did not preserve safety boundaries.");
+}
+
+if (foundryManifest.tools.length < 3) {
+  throw new Error("Foundry sample manifest needs enough tools for mapping.");
+}
+
+const foundryImport = FoundryAgentImportSchema.parse({
+  id: "agent-import-dev-check",
+  importedAt: "2026-06-09T00:00:00.000Z",
+  mode: "foundry_manifest",
+  projectId: "project-foundry-dev-check",
+  agentTargetId: "target-foundry-dev-check",
+  manifest: foundryManifest
+});
+
+const foundryTrustMap = AgentTrustBoundaryMapSchema.parse({
+  agentImportId: foundryImport.id,
+  agentName: foundryImport.manifest.name,
+  generatedAt: "2026-06-09T00:01:00.000Z",
+  executionMode: foundryImport.mode,
+  boundaries: [
+    {
+      id: "boundary-user-input",
+      label: "User request and retrieved content",
+      category: "user_input",
+      riskLevel: "medium",
+      reviewed: true,
+      controls: ["instruction/data separation", "untrusted data labels"],
+      failureModes: ["prompt_injection", "task_drift"]
+    },
+    {
+      id: "boundary-foundry-tool",
+      label: foundryManifest.tools[0]!.name,
+      category: "tool_call",
+      riskLevel: foundryManifest.tools[0]!.riskLevel,
+      reviewed: foundryManifest.tools[0]!.reviewed,
+      controls: ["modeled-only execution", "no live tool calls"],
+      failureModes: ["tool_poisoning", "scope_breach"]
+    }
+  ],
+  safetyStatement:
+    "Dev check trust map is manifest-only and does not execute live systems."
+});
+
+if (foundryTrustMap.boundaries.length < 2) {
+  throw new Error("Foundry trust map validation did not include boundaries.");
+}
+
+const foundryReadiness = FoundryReadinessResultSchema.parse({
+  configured: false,
+  mode: "manifest_only",
+  checkedAt: "2026-06-09T00:02:00.000Z",
+  configuredEnv: [],
+  missingEnv: [
+    "AZURE_FOUNDRY_PROJECT_ENDPOINT",
+    "AZURE_FOUNDRY_AGENT_ID",
+    "AZURE_TENANT_ID"
+  ],
+  allowedOperations: [
+    "reviewed_manifest_import",
+    "trust_boundary_mapping",
+    "modeled_crash_test",
+    "fixture_replay"
+  ],
+  blockedOperations: [
+    "live_tool_execution",
+    "live_mcp_execution",
+    "shell_commands",
+    "credential_storage"
+  ],
+  safetyStatement:
+    "Foundry readiness validation is opt-in and blocks live side effects."
+});
+
+if (foundryReadiness.configured) {
+  throw new Error("Dev-check Foundry readiness should default to manifest-only.");
+}
+
 const requiredReadinessFiles = [
   ".github/workflows/ci.yml",
   ".github/copilot-instructions.md",
@@ -516,6 +609,10 @@ const requiredReadinessFiles = [
   "docs/assets/screenshots/patch-coach.png",
   "docs/assets/screenshots/fixture-replay-comparison.png",
   "docs/assets/screenshots/safety-card.png",
+  "docs/assets/brand/failsafe-logo.png",
+  "docs/assets/brand/crash-lab-hero.png",
+  "apps/studio-web/public/brand/failsafe-logo.png",
+  "apps/studio-web/public/brand/crash-lab-hero.png",
   "LICENSE"
 ];
 
@@ -556,7 +653,7 @@ assertFileIncludes(
 );
 assertFileIncludes(
   "docs/final-ready-lock-list.md",
-  "FailSafe remains defensive, local, synthetic, typed, and reviewed."
+  "FailSafe remains defensive, local, typed, and reviewed."
 );
 
 assertFileOmits("scripts/failsafe.ts", "In-memory " + "mock regressions");
@@ -623,12 +720,28 @@ const sandboxHelp = execFileSync(
     stdio: ["ignore", "pipe", "pipe"]
   }
 );
+const foundryHelp = execFileSync(
+  process.execPath,
+  [tsxCliPath, "scripts/failsafe.ts", "foundry", "--help"],
+  {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  }
+);
+const agentHelp = execFileSync(
+  process.execPath,
+  [tsxCliPath, "scripts/failsafe.ts", "agent", "--help"],
+  {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"]
+  }
+);
 
 if (!rootHelp.includes("FailSafe local CLI")) {
   throw new Error("FailSafe CLI root help did not render expected text.");
 }
 
-if (!replayHelp.includes("FailSafe mock replay")) {
+if (!replayHelp.includes("FailSafe Sample Lab replay")) {
   throw new Error("FailSafe CLI replay help did not render expected text.");
 }
 
@@ -640,6 +753,14 @@ if (!sandboxHelp.includes("FailSafe reviewed sandbox plan")) {
   throw new Error("FailSafe CLI sandbox help did not render expected text.");
 }
 
+if (!foundryHelp.includes("FailSafe Microsoft Foundry adapter")) {
+  throw new Error("FailSafe CLI Foundry help did not render expected text.");
+}
+
+if (!agentHelp.includes("FailSafe agent crash testing")) {
+  throw new Error("FailSafe CLI agent help did not render expected text.");
+}
+
 if (!rootHelp.includes("reset-demo-data")) {
   throw new Error("FailSafe CLI root help did not include reset-demo-data.");
 }
@@ -649,5 +770,5 @@ if (!sandboxHelp.includes("fixture-replay")) {
 }
 
 console.log(
-  `FailSafe dev check passed: ${parsedPacks.length} packs, ${parsedRuns.length} seeded run, ${engineRuns.length} deterministic engine runs, replay schema ok, fixture replay ok, Patch Coach ok, report schema ok, comparison schema ok, runner dry-run policy ok, sandbox plan ok, CLI help ok, readiness artifacts ok, safety guardrails ok.`
+  `FailSafe dev check passed: ${parsedPacks.length} packs, ${parsedRuns.length} seeded run, ${engineRuns.length} deterministic engine runs, replay schema ok, fixture replay ok, Foundry manifest ok, Foundry readiness ok, Patch Coach ok, report schema ok, comparison schema ok, runner dry-run policy ok, sandbox plan ok, CLI help ok, readiness artifacts ok, safety guardrails ok.`
 );

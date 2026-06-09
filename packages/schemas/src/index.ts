@@ -3,6 +3,7 @@ export * from "./comparison";
 export * from "./execution";
 export * from "./finding";
 export * from "./fixture-replay";
+export * from "./foundry";
 export * from "./patch-coach";
 export * from "./project";
 export * from "./regression";

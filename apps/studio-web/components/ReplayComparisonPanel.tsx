@@ -97,7 +97,7 @@ export function ReplayComparisonPanel({
 
       {isLoading ? (
         <p className="text-sm leading-6 text-slate-300">
-          Loading the local replay comparison from the mock API.
+          Loading the local replay comparison from the API.
         </p>
       ) : null}
 
@@ -180,7 +180,7 @@ export function ReplayComparisonPanel({
               aria-hidden="true"
             />
             <p>
-              This compares two synthetic mock runs. It does not prove a real
+              This compares local replay evidence. It does not prove a real
               mitigation worked. A future explicitly reviewed sandbox path may
               compare patched-agent behavior.
             </p>

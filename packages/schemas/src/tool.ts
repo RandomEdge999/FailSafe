@@ -12,6 +12,7 @@ export const ToolSourceSchema = z.enum([
   "mcp-server",
   "repository",
   "browser",
+  "foundry",
   "mock"
 ]);
 

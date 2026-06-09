@@ -1,5 +1,8 @@
 import {
   FixtureReplayResultSchema,
+  FoundryAgentImportSchema,
+  FoundryReadinessResultSchema,
+  AgentTrustBoundaryMapSchema,
   PatchCoachPlanSchema,
   RegressionArtifactSchema,
   RunnerDryRunResultSchema,
@@ -7,6 +10,9 @@ import {
   SandboxReplayPlanSchema,
   ScenarioRunSchema,
   type FixtureReplayResult,
+  type FoundryAgentImport,
+  type FoundryReadinessResult,
+  type AgentTrustBoundaryMap,
   type PatchCoachPlan,
   type RegressionArtifact,
   type RunnerDryRunResult,
@@ -43,6 +49,14 @@ Usage:
   pnpm failsafe patch-coach <run-id> [finding-id]
   pnpm failsafe report <run-id>
   pnpm failsafe reports
+  pnpm failsafe foundry --help
+  pnpm failsafe foundry readiness
+  pnpm failsafe foundry import-sample
+  pnpm failsafe agents
+  pnpm failsafe agent --help
+  pnpm failsafe agent trust-map <agent-id>
+  pnpm failsafe agent crash-test <agent-id> [scenario-pack-id]
+  pnpm failsafe agent fixture-replay <agent-id> [scenario-pack-id]
   pnpm failsafe runner --help
   pnpm failsafe runner preview
   pnpm failsafe sandbox --help
@@ -51,10 +65,10 @@ Usage:
   pnpm failsafe reset-demo-data
 
 Environment:
-  FAILSAFE_API_BASE_URL  Override the mock API base URL. Default: http://localhost:4000
+  FAILSAFE_API_BASE_URL  Override the local API base URL. Default: http://localhost:4000
 
 Safety:
-  This CLI only calls the running FailSafe mock API. It does not execute tools,
+  This CLI only calls the running FailSafe local API. It does not execute tools,
   shell commands, file actions, live LLM calls, MCP servers, Copilot, email,
   databases, or external systems.
 
@@ -64,19 +78,48 @@ Limitations:
   \`pnpm dev:api\` before running commands that call endpoints.`);
 }
 
+function printFoundryHelp() {
+  console.log(`FailSafe Microsoft Foundry adapter
+
+Usage:
+  pnpm failsafe foundry readiness
+  pnpm failsafe foundry import-sample
+
+Behavior:
+  Checks opt-in Foundry environment readiness or imports the app-owned reviewed
+  Foundry-style agent manifest. No credentials are accepted in command args and
+  no live tools, MCP servers, shell commands, arbitrary files, email, databases,
+  or external targets are executed.`);
+}
+
+function printAgentHelp() {
+  console.log(`FailSafe agent crash testing
+
+Usage:
+  pnpm failsafe agents
+  pnpm failsafe agent trust-map <agent-id>
+  pnpm failsafe agent crash-test <agent-id> [scenario-pack-id]
+  pnpm failsafe agent fixture-replay <agent-id> [scenario-pack-id]
+
+Behavior:
+  Uses imported reviewed Foundry manifests and app-owned fixture replay only.
+  Start the API with \`pnpm dev:api\` and run
+  \`pnpm failsafe foundry import-sample\` first if no agents are listed.`);
+}
+
 function printReplayHelp() {
-  console.log(`FailSafe mock replay
+  console.log(`FailSafe Sample Lab replay
 
 Usage:
   pnpm failsafe replay <regression-id>
 
 Behavior:
-  Calls POST /regressions/:id/replay-mock on the running mock API, then polls
+  Calls POST /regressions/:id/replay-mock on the running local API, then polls
   GET /runs/:id until the replay leaves queued/running.
 
 Notes:
-  Start the mock API with \`pnpm dev:api\`.
-  This CLI only calls the mock API; it does not execute tools, shell commands,
+  Start the local API with \`pnpm dev:api\`.
+  This CLI only calls the local API; it does not execute tools, shell commands,
   file actions, network calls, MCP servers, model calls, email, databases, or
   external systems.
   Regression artifacts are stored in the local app-owned .failsafe-data store.`);
@@ -89,11 +132,11 @@ Usage:
   pnpm failsafe runner preview
 
 Behavior:
-  Calls POST /runner/dry-run on the running mock API with a synthetic action
+  Calls POST /runner/dry-run on the running local API with a synthetic action
   list, then prints deny-by-default policy decisions.
 
 Notes:
-  Start the mock API with \`pnpm dev:api\`.
+  Start the local API with \`pnpm dev:api\`.
   This is a policy preview only. It does not execute tools, shell commands,
   file actions, network calls, MCP servers, model calls, email, databases, or
   external systems.`);
@@ -108,10 +151,10 @@ Usage:
 
 Behavior:
   Calls sandbox planning or reviewed fixture-only replay endpoints on the
-  running mock API.
+  running local API.
 
 Notes:
-  Start the mock API with \`pnpm dev:api\`.
+  Start the local API with \`pnpm dev:api\`.
   Fixture replay uses reviewed synthetic fixtures only. It does not accept
   client paths, URLs, shell commands, tool names, network calls, MCP servers,
   model calls, email, databases, or live targets.`);
@@ -142,7 +185,7 @@ async function requestJson<T>(
     });
   } catch (error) {
     throw new CliError(
-      `FailSafe mock API is unavailable at ${apiBaseUrl}. Start the mock API with \`pnpm dev:api\`.\nThis CLI only calls the mock API; it does not execute tools, shell commands, file actions, network calls, MCP servers, model calls, email, databases, or external systems.`
+      `FailSafe local API is unavailable at ${apiBaseUrl}. Start the local API with \`pnpm dev:api\`.\nThis CLI only calls the local API; it does not execute tools, shell commands, file actions, network calls, MCP servers, model calls, email, databases, or external systems.`
     );
   }
 
@@ -155,14 +198,151 @@ async function requestJson<T>(
       "message" in payload &&
       typeof payload.message === "string"
         ? payload.message
-        : `Mock API request failed with HTTP ${response.status}.`;
+        : `Local API request failed with HTTP ${response.status}.`;
 
     throw new CliError(
-      `${message}\nStart the mock API with \`pnpm dev:api\`.\nThis CLI only calls the mock API; it does not execute tools, shell commands, file actions, network calls, MCP servers, model calls, email, databases, or external systems.`
+      `${message}\nStart the local API with \`pnpm dev:api\`.\nThis CLI only calls the FailSafe API; it does not execute tools, shell commands, file actions, network calls, MCP servers, model calls, email, databases, or external systems.`
     );
   }
 
   return parse(payload);
+}
+
+function printFoundryReadiness(readiness: FoundryReadinessResult) {
+  console.log("FailSafe Foundry readiness");
+  console.log(`API base URL: ${apiBaseUrl}`);
+  console.log(`Configured: ${readiness.configured}`);
+  console.log(`Mode: ${readiness.mode}`);
+  console.log(`Configured env: ${formatList(readiness.configuredEnv)}`);
+  console.log(`Missing env: ${formatList(readiness.missingEnv)}`);
+  console.log(`Allowed operations: ${formatList(readiness.allowedOperations)}`);
+  console.log(`Blocked operations: ${formatList(readiness.blockedOperations)}`);
+  console.log(`Safety: ${readiness.safetyStatement}`);
+}
+
+async function foundryReadinessCommand() {
+  const readiness = await requestJson("/foundry/readiness", (value) =>
+    FoundryReadinessResultSchema.parse(value)
+  );
+
+  printFoundryReadiness(readiness);
+}
+
+function printFoundryAgent(agent: FoundryAgentImport) {
+  console.log(
+    [
+      `- ${agent.id}`,
+      `name="${agent.manifest.name}"`,
+      `mode=${agent.mode}`,
+      `model=${agent.manifest.model.family}`,
+      `tools=${agent.manifest.tools.length}`,
+      `imported=${agent.importedAt}`
+    ].join(" | ")
+  );
+}
+
+async function importFoundrySampleCommand() {
+  const agent = await requestJson(
+    "/foundry/manifest/import",
+    (value) => FoundryAgentImportSchema.parse(value),
+    {
+      body: JSON.stringify({ source: "sample" }),
+      method: "POST"
+    }
+  );
+
+  console.log("FailSafe reviewed Foundry manifest imported");
+  console.log(`API base URL: ${apiBaseUrl}`);
+  printFoundryAgent(agent);
+  console.log(
+    "Manifest import only: no credentials, network calls, live tools, MCP execution, shell commands, arbitrary files, email, or databases were used."
+  );
+}
+
+async function listAgentsCommand() {
+  const agents = await requestJson("/agents", (value) =>
+    FoundryAgentImportSchema.array().parse(value)
+  );
+
+  if (agents.length === 0) {
+    console.log(
+      "No reviewed Foundry agents imported. Run `pnpm failsafe foundry import-sample`."
+    );
+    return;
+  }
+
+  console.log(`FailSafe imported agents from ${apiBaseUrl}:`);
+
+  for (const agent of agents) {
+    printFoundryAgent(agent);
+  }
+}
+
+function printTrustMap(map: AgentTrustBoundaryMap) {
+  console.log("FailSafe agent trust-boundary map");
+  console.log(`Agent: ${map.agentName}`);
+  console.log(`Mode: ${map.executionMode}`);
+  console.log(`Boundaries: ${map.boundaries.length}`);
+
+  for (const boundary of map.boundaries) {
+    console.log(
+      `- ${boundary.label} | ${boundary.category} | risk=${boundary.riskLevel} | reviewed=${boundary.reviewed}`
+    );
+  }
+
+  console.log(`Safety: ${map.safetyStatement}`);
+}
+
+async function agentTrustMapCommand(agentId: string | undefined) {
+  if (!agentId) {
+    throw new CliError(
+      "Missing agent ID. Run `pnpm failsafe agent --help` for usage."
+    );
+  }
+
+  const map = await requestJson(
+    `/agents/${encodeURIComponent(agentId)}/trust-map`,
+    (value) => AgentTrustBoundaryMapSchema.parse(value)
+  );
+
+  printTrustMap(map);
+}
+
+async function agentCrashTestCommand(
+  agentId: string | undefined,
+  scenarioPackId: string | undefined,
+  fixtureReplay: boolean
+) {
+  if (!agentId) {
+    throw new CliError(
+      "Missing agent ID. Run `pnpm failsafe agent --help` for usage."
+    );
+  }
+
+  const run = await requestJson(
+    `/agents/${encodeURIComponent(agentId)}/${fixtureReplay ? "fixture-replay" : "crash-test"}`,
+    (value) => ScenarioRunSchema.parse(value),
+    {
+      body: JSON.stringify({ scenarioPackId }),
+      method: "POST"
+    }
+  );
+
+  console.log(
+    fixtureReplay
+      ? "FailSafe Foundry fixture replay complete"
+      : "FailSafe Foundry crash test complete"
+  );
+  console.log(`API base URL: ${apiBaseUrl}`);
+  console.log(`Run ID: ${run.id}`);
+  console.log(`Status: ${run.status}`);
+  console.log(`Scenario pack ID: ${run.scenarioPackId}`);
+  console.log(`Score: ${run.score.overall}`);
+  console.log(`Finding count: ${run.findings.length}`);
+  console.log(`Trace event count: ${run.trace.length}`);
+  console.log(
+    "Foundry adapter safety: no live tools, MCP servers, shell commands, arbitrary files, email, databases, or external targets were executed."
+  );
 }
 
 async function listRegressions() {
@@ -252,7 +432,7 @@ async function pollRun(runId: string) {
 
   if (isRunInProgress(latestRun)) {
     throw new CliError(
-      `Timed out waiting for replay run ${runId} to finish mock lifecycle polling.`
+      `Timed out waiting for replay run ${runId} to finish local lifecycle polling.`
     );
   }
 
@@ -276,7 +456,7 @@ async function replayRegression(regressionId: string | undefined) {
   );
   const replayRun = await pollRun(createdRun.id);
 
-  console.log("FailSafe mock replay complete");
+  console.log("FailSafe Sample Lab replay complete");
   console.log(`API base URL: ${apiBaseUrl}`);
   console.log(`Replay run ID: ${replayRun.id}`);
   console.log(`Status: ${replayRun.status}`);
@@ -479,7 +659,7 @@ function printSafetyReport(report: SafetyReport) {
   console.log(`Report ID: ${report.id}`);
   console.log(`Run ID: ${report.runId}`);
   console.log(`Path: ${report.appOwnedPath}`);
-  console.log(`Mock only: ${report.mockOnly}`);
+  console.log(`Local evidence only: ${report.mockOnly}`);
   console.log(`Fixture only: ${report.fixtureOnly}`);
   console.log(`Summary: ${report.summary}`);
 }
@@ -573,6 +753,62 @@ async function main() {
   if (command === "runs") {
     await listRunsCommand();
     return;
+  }
+
+  if (command === "foundry") {
+    const [subcommand] = args;
+
+    if (!subcommand || subcommand === "--help" || subcommand === "-h") {
+      printFoundryHelp();
+      return;
+    }
+
+    if (subcommand === "readiness") {
+      await foundryReadinessCommand();
+      return;
+    }
+
+    if (subcommand === "import-sample") {
+      await importFoundrySampleCommand();
+      return;
+    }
+
+    throw new CliError(
+      `Unknown foundry command: ${subcommand}. Run \`pnpm failsafe foundry --help\`.`
+    );
+  }
+
+  if (command === "agents") {
+    await listAgentsCommand();
+    return;
+  }
+
+  if (command === "agent") {
+    const [subcommand, agentId, scenarioPackId] = args;
+
+    if (!subcommand || subcommand === "--help" || subcommand === "-h") {
+      printAgentHelp();
+      return;
+    }
+
+    if (subcommand === "trust-map") {
+      await agentTrustMapCommand(agentId);
+      return;
+    }
+
+    if (subcommand === "crash-test") {
+      await agentCrashTestCommand(agentId, scenarioPackId, false);
+      return;
+    }
+
+    if (subcommand === "fixture-replay") {
+      await agentCrashTestCommand(agentId, scenarioPackId, true);
+      return;
+    }
+
+    throw new CliError(
+      `Unknown agent command: ${subcommand}. Run \`pnpm failsafe agent --help\`.`
+    );
   }
 
   if (command === "replay") {

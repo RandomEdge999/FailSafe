@@ -73,7 +73,7 @@ export function CrashTimeline({
       {run.trace.length === 0 ? (
         <EmptyState
           title="Timeline is warming up"
-          body="The mock run has been queued and trace evidence will appear as the API lifecycle advances."
+          body="The local run has been queued and trace evidence will appear as the API lifecycle advances."
         />
       ) : null}
       <ol className="relative space-y-4">
