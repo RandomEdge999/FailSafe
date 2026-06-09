@@ -32,7 +32,7 @@ class CliError extends Error {
 }
 
 function printRootHelp() {
-  console.log(`FailSafe mock CLI
+  console.log(`FailSafe local CLI
 
 Usage:
   pnpm failsafe --help
@@ -177,7 +177,7 @@ async function listRegressions() {
     return;
   }
 
-  console.log(`In-memory mock regressions from ${apiBaseUrl}:`);
+  console.log(`Local persisted regressions from ${apiBaseUrl}:`);
 
   for (const regression of regressions) {
     printRegressionLine(regression);

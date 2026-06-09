@@ -113,7 +113,7 @@ Still deferred:
 - Full scenario step evaluator.
 - Real mock-agent adapter process.
 - Patched-agent before/after comparison from a reviewed sandbox runner.
-- Persistent regression storage.
+- External persistence beyond the app-owned local `.failsafe-data` store.
 
 ## Phase 3B: Reviewed Local Sandbox Replay Plan Foundation
 
@@ -201,4 +201,4 @@ Still future work:
 2. Live MCP introspection/execution through reviewed mock or fixture adapters.
 3. Optional live model/provider integration behind explicit opt-in config.
 4. Optional Copilot invocation from outside the app through a reviewed workflow.
-5. Browser harnesses, OpenTelemetry export, screenshots/GIFs, and final demo video assets.
+5. Browser harnesses, OpenTelemetry export, optional GIFs, and final demo video assets.

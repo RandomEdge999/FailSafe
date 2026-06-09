@@ -94,3 +94,15 @@ Close with the project fit:
 - Uses GitHub Copilot instructions, prompt files, and custom agent roles.
 - Helps developers reason about reliability and safety.
 - Turns AI safety from vague advice into a visible, repeatable workflow.
+
+## Demo Screenshots
+
+The tracked screenshots for README and submission prep are captured from the real local Studio:
+
+- `docs/assets/screenshots/dashboard.png`
+- `docs/assets/screenshots/timeline-finding-detail.png`
+- `docs/assets/screenshots/patch-coach.png`
+- `docs/assets/screenshots/fixture-replay-comparison.png`
+- `docs/assets/screenshots/safety-card.png`
+
+Use these as backup assets for the final recording and submission page. The final video URL and team/member details are intentionally left to the submitter.

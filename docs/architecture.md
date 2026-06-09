@@ -194,7 +194,7 @@ The CLI defaults to `http://localhost:4000` and supports `FAILSAFE_API_BASE_URL`
 
 Phase 3A implemented the runner contract, capability manifest, dry-run policy preview, API endpoint, CLI preview, dev-check validation, and Studio readiness panel. It did not implement a real sandbox runner.
 
-Phase 3B implemented the reviewed sandbox replay plan contract, deterministic planner helper, plan endpoint, CLI plan command, dev-check validation, and Studio sandbox planning panel. It did not implement fixture replay execution or a real sandbox runner.
+Phase 3B implemented the reviewed sandbox replay plan contract, deterministic planner helper, plan endpoint, CLI plan command, dev-check validation, and Studio sandbox planning panel. Phase 3C implemented reviewed fixture-only replay from FailSafe-owned synthetic fixtures. Real sandbox execution remains future work.
 
 The future runner should:
 

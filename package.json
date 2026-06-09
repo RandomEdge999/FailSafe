@@ -12,7 +12,8 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "dev:check": "tsx scripts/dev-check.ts",
-    "check": "pnpm dev:check && pnpm typecheck"
+    "check": "pnpm dev:check && pnpm typecheck",
+    "test": "pnpm check"
   },
   "devDependencies": {
     "@failsafe/scenario-engine": "workspace:*",

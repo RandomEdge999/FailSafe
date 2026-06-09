@@ -43,7 +43,7 @@ function buildPromptPayload(
   return JSON.stringify(
     {
       recommendedPromptFile: ".github/prompts/patch-guardrail.prompt.md",
-      productMode: "Phase 2 mock studio",
+      productMode: "PRD-grade local crash-test studio",
       selectedScenarioPack: scenarioPack?.id,
       selectedFinding: {
         id: finding.id,
@@ -199,7 +199,7 @@ export function CopilotPromptPanel({
           </div>
           <div className="rounded-md border border-warning/30 bg-warning/10 p-4">
             <p className="text-sm font-semibold text-warning">
-              No live code patch is executed from the UI in Phase 2.
+              No live code patch is executed from the UI.
             </p>
             <p className="mt-2 text-sm leading-6 text-slate-300">
               The workflow is a visible, mock Copilot handoff only. A developer

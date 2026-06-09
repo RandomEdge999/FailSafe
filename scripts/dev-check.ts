@@ -28,6 +28,7 @@ import {
   ScenarioRunSchema
 } from "@failsafe/schemas";
 import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { mockProjects } from "../apps/orchestrator-api/src/data/mock-projects";
 import { mockRuns } from "../apps/orchestrator-api/src/data/mock-runs";
@@ -498,6 +499,96 @@ SafetyReportSchema.parse({
   limitations: ["Not a security certification."]
 });
 
+const requiredReadinessFiles = [
+  ".github/workflows/ci.yml",
+  ".github/copilot-instructions.md",
+  ".github/prompts/explain-failure.prompt.md",
+  ".github/prompts/generate-regression.prompt.md",
+  ".github/prompts/patch-guardrail.prompt.md",
+  ".github/prompts/write-safety-card.prompt.md",
+  "agents/crash-analyst.agent.md",
+  "agents/mitigation-coach.agent.md",
+  "agents/scenario-author.agent.md",
+  "agents/demo-director.agent.md",
+  "docs/final-ready-lock-list.md",
+  "docs/assets/screenshots/dashboard.png",
+  "docs/assets/screenshots/timeline-finding-detail.png",
+  "docs/assets/screenshots/patch-coach.png",
+  "docs/assets/screenshots/fixture-replay-comparison.png",
+  "docs/assets/screenshots/safety-card.png",
+  "LICENSE"
+];
+
+for (const filePath of requiredReadinessFiles) {
+  if (!existsSync(filePath)) {
+    throw new Error(`Required readiness artifact is missing: ${filePath}`);
+  }
+}
+
+function readRepoFile(filePath: string) {
+  return readFileSync(filePath, "utf8");
+}
+
+function assertFileIncludes(filePath: string, expectedText: string) {
+  const content = readRepoFile(filePath);
+
+  if (!content.includes(expectedText)) {
+    throw new Error(`${filePath} is missing expected readiness text.`);
+  }
+}
+
+function assertFileOmits(filePath: string, forbiddenText: string) {
+  const content = readRepoFile(filePath);
+
+  if (content.includes(forbiddenText)) {
+    throw new Error(`${filePath} still contains stale text: ${forbiddenText}`);
+  }
+}
+
+assertFileIncludes("README.md", "## How GitHub Copilot Was Used");
+assertFileIncludes("README.md", "## Demo Assets");
+assertFileIncludes("README.md", "## GitHub Readiness");
+assertFileIncludes("README.md", "## Safety Boundaries");
+assertFileIncludes("README.md", "## Known Limitations");
+assertFileIncludes(
+  "README.md",
+  "docs/assets/screenshots/fixture-replay-comparison.png"
+);
+assertFileIncludes(
+  "docs/final-ready-lock-list.md",
+  "FailSafe remains defensive, local, synthetic, typed, and reviewed."
+);
+
+assertFileOmits("scripts/failsafe.ts", "In-memory " + "mock regressions");
+assertFileOmits(
+  "apps/studio-web/components/CopilotPromptPanel.tsx",
+  "Phase 2 " + "mock studio"
+);
+assertFileOmits(
+  "docs/architecture.md",
+  "It did not implement " + "fixture replay execution"
+);
+assertFileOmits("docs/build-plan.md", "Persistent " + "regression storage.");
+
+const envExample = readRepoFile(".env.example");
+const activeEnvLines = envExample
+  .split(/\r?\n/)
+  .map((line) => line.trim())
+  .filter((line) => line.length > 0 && !line.startsWith("#"));
+
+for (const forbiddenEnvName of [
+  "OPENAI_API_KEY",
+  "GITHUB_TOKEN",
+  "DATABASE_URL",
+  "REDIS_URL"
+]) {
+  if (activeEnvLines.some((line) => line.startsWith(`${forbiddenEnvName}=`))) {
+    throw new Error(
+      `.env.example contains active future integration setting: ${forbiddenEnvName}`
+    );
+  }
+}
+
 const requireFromDevCheck = createRequire(import.meta.url);
 const tsxCliPath = requireFromDevCheck.resolve("tsx/cli");
 const rootHelp = execFileSync(
@@ -533,7 +624,7 @@ const sandboxHelp = execFileSync(
   }
 );
 
-if (!rootHelp.includes("FailSafe mock CLI")) {
+if (!rootHelp.includes("FailSafe local CLI")) {
   throw new Error("FailSafe CLI root help did not render expected text.");
 }
 
@@ -558,5 +649,5 @@ if (!sandboxHelp.includes("fixture-replay")) {
 }
 
 console.log(
-  `FailSafe dev check passed: ${parsedPacks.length} packs, ${parsedRuns.length} seeded run, ${engineRuns.length} deterministic engine runs, replay schema ok, fixture replay ok, Patch Coach ok, report schema ok, comparison schema ok, runner dry-run policy ok, sandbox plan ok, CLI help ok, safety guardrails ok.`
+  `FailSafe dev check passed: ${parsedPacks.length} packs, ${parsedRuns.length} seeded run, ${engineRuns.length} deterministic engine runs, replay schema ok, fixture replay ok, Patch Coach ok, report schema ok, comparison schema ok, runner dry-run policy ok, sandbox plan ok, CLI help ok, readiness artifacts ok, safety guardrails ok.`
 );

@@ -16,6 +16,18 @@ FailSafe makes invisible agent failure paths visible. Instead of treating prompt
 
 FailSafe is built for the Microsoft Agents League Hackathon, Creative Apps category. The project emphasizes creativity, reasoning, reliability, safety, and polished user experience. GitHub Copilot usage is part of the product surface through repository instructions, prompt files, custom agent roles, mitigation workflows, and regression-generation prompts.
 
+## How GitHub Copilot Was Used
+
+FailSafe makes Copilot usage visible as part of the developer workflow, while keeping all patching under human review:
+
+- `.github/copilot-instructions.md` defines repo-wide safety and engineering rules for Copilot.
+- `.github/prompts/` contains reusable prompts for explaining failures, generating regressions, patching guardrails, creating scenario packs, writing Safety Cards, and updating architecture docs.
+- `agents/` contains custom agent profiles for crash analysis, mitigation coaching, scenario authoring, and demo direction.
+- The Studio `Fix with Copilot` flow generates typed Patch Coach prompt payloads from findings and trace evidence.
+- The CLI exposes `pnpm failsafe patch-coach <run-id> [finding-id]` for the same local prompt-plan flow.
+
+FailSafe does not invoke Copilot, edit files, or apply patches from the app. The product prepares bounded Copilot-ready inputs for a developer to review and use.
+
 ## Core Workflow
 
 1. Import or select an agent project.
@@ -89,6 +101,12 @@ pnpm check
 pnpm build
 ```
 
+Run the same local readiness command through the package test alias:
+
+```bash
+pnpm test
+```
+
 Run the safe local mock CLI:
 
 ```bash
@@ -114,6 +132,18 @@ Default local URLs:
 - Studio: http://localhost:3000
 - API health: http://localhost:4000/health
 - Mock scenarios: http://localhost:4000/scenarios
+
+## GitHub Readiness
+
+The repo is prepared for public review:
+
+- MIT license in `LICENSE`.
+- GitHub Actions workflow in `.github/workflows/ci.yml`.
+- Local CI-equivalent command: `pnpm check && pnpm build`.
+- Final push checklist in `docs/final-ready-lock-list.md`.
+- `.gitignore` excludes `node_modules`, Next/build outputs, local logs, `.env`, `.env.*`, and `.failsafe-data`.
+- `.env.example` contains only local development defaults and commented placeholders for future reviewed integrations.
+- `FailSafe_PRD.md` is a protected local context file and is intentionally not tracked.
 
 ## Mock API Endpoints
 
@@ -185,11 +215,52 @@ POST /regressions/regression-tool-poisoning-pack-tool-poisoning-guardrail-a1b2c3
 
 Open the studio and show the FailSafe dashboard. The page loads the demo project, starter scenario packs, seeded run, findings, score, trace, and saved regressions from the API. Select a starter pack, click Run Crash Test, and watch the run move through queued and running states before it reaches needs_review. Click timeline events to inspect raw evidence, click finding cards to inspect root cause and mitigations, open Fix with Copilot to generate a typed Patch Coach plan, then Save Regression to create a local regression artifact. Click Replay Mock to rerun the deterministic synthetic scenario, then click Fixture Replay to run the reviewed synthetic fixture-only replay. Show the Baseline vs Replay panel and explain that it compares synthetic evidence only. Export a Safety Card and point out the app-owned `.failsafe-data/reports` path. Optionally run `pnpm failsafe runs`, `pnpm failsafe regressions`, `pnpm failsafe replay <regression-id>`, `pnpm failsafe sandbox fixture-replay <regression-id>`, `pnpm failsafe patch-coach <run-id>`, and `pnpm failsafe report <run-id>` while the API is running to show the same local flows from the CLI.
 
+## Demo Assets
+
+The tracked screenshots below are captured from the local Studio and are safe to use in a GitHub README or hackathon submission:
+
+![FailSafe dashboard](docs/assets/screenshots/dashboard.png)
+
+![Timeline and finding detail](docs/assets/screenshots/timeline-finding-detail.png)
+
+![Patch Coach prompt plan](docs/assets/screenshots/patch-coach.png)
+
+![Fixture replay comparison](docs/assets/screenshots/fixture-replay-comparison.png)
+
+![Safety Card export](docs/assets/screenshots/safety-card.png)
+
+The final demo video and team/member information should be added in the hackathon submission form. They are intentionally not invented in this repository.
+
 ## Safety Disclaimer
 
 FailSafe is defensive-use-only software. This repository uses synthetic examples and local mock agents. Do not use it against unauthorized systems, real secrets, real customer data, or live external targets. Dangerous actions must remain mocked unless an explicitly reviewed sandbox runner is available. Reviewed fixture replay uses synthetic app-owned fixtures only; it does not execute arbitrary code or prove runtime isolation.
 
 The current score is an initial product heuristic for demos and prioritization. It is not a formal security standard and must not be presented as a guarantee of safety.
+
+## Safety Boundaries
+
+FailSafe preserves these non-negotiable boundaries:
+
+- No arbitrary shell execution.
+- No arbitrary file reads or writes from user-provided paths.
+- No destructive file operations.
+- No live external target testing.
+- No live exploit testing.
+- No live MCP tool execution.
+- No live model calls.
+- No live Copilot invocation from the app.
+- No email sending or external database side effects.
+- No credential storage.
+
+All current run, replay, fixture replay, Patch Coach, and report flows are local, synthetic, typed, reviewed, and defensive.
+
+## Known Limitations
+
+- Fixture replay is reviewed and synthetic only; it is not arbitrary sandbox execution.
+- Baseline-vs-replay comparison is local evidence only; it is not proof that a real mitigation is production-safe.
+- Patch Coach creates Copilot-ready prompt payloads; it does not apply patches.
+- Safety Cards summarize selected local evidence; they are not certifications.
+- Real sandbox isolation, live MCP integration, live model/provider integration, OpenTelemetry export, auth, deployment infrastructure, and external persistence remain future work.
 
 ## Roadmap
 
