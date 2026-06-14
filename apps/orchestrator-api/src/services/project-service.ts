@@ -13,7 +13,7 @@ export function listProjects() {
   return [
     ...listFoundryAgents().map((agent) => getFoundryAgentProject(agent.id)),
     ...listEvidenceCaptures().map(projectFromEvidenceCapture),
-    ...mockProjects
+    ...(process.env.FAILSAFE_ENABLE_SAMPLE_DATA === "1" ? mockProjects : [])
   ].filter((project) => project !== undefined);
 }
 
@@ -23,6 +23,8 @@ export function getProjectById(id: string) {
       .map((agent) => getFoundryAgentProject(agent.id))
       .find((project) => project?.id === id) ??
     getEvidenceProject(id) ??
-    mockProjects.find((project) => project.id === id)
+    (process.env.FAILSAFE_ENABLE_SAMPLE_DATA === "1"
+      ? mockProjects.find((project) => project.id === id)
+      : undefined)
   );
 }

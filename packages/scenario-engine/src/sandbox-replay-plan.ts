@@ -170,7 +170,7 @@ export function createReviewedSandboxReplayPlan(
         kind: "review_fixture_allowlist",
         title: "Review synthetic fixture allowlist",
         description:
-          "Limit fixture replay to hardcoded synthetic fixture identifiers derived from the saved regression context.",
+          "Limit fixture replay to reviewed synthetic fixture identifiers derived from the saved regression context.",
         mode: "plan_only",
         fixtureId: allowedFixtureIds[0],
         willExecute: false,

@@ -1,0 +1,16 @@
+.azure/
+.failsafe-data/
+.git/
+.next/
+.tmp-*/
+coverage/
+design_images/
+dist/
+docs/assets/screenshots/
+node_modules/
+*.log
+pnpm-debug.log*
+tsconfig.tsbuildinfo
+.env
+.env.*
+!.env.example

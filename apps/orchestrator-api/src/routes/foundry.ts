@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import {
   CreateAgentCrashTestInputSchema,
   EvidenceCrashTestResponseSchema,
+  FoundryAgentManifestSchema,
   FoundryAgentImportInputSchema,
   ImportAgentEvidenceInputSchema
 } from "@failsafe/schemas";
@@ -18,6 +19,8 @@ import {
   getFoundryReadiness,
   importFoundryManifest,
   listFoundryAgents,
+  probeConnectedFoundry,
+  runConnectedFoundry,
   validateConnectedFoundry
 } from "../services/foundry-service";
 
@@ -28,8 +31,25 @@ export async function registerFoundryRoutes(app: FastifyInstance) {
     validateConnectedFoundry()
   );
 
+  app.get("/foundry/connected/probe", async () => probeConnectedFoundry());
+
+  app.post("/foundry/connected/run", async (_request, reply) => {
+    const result = runConnectedFoundry();
+
+    return reply
+      .code(result.status === "manual_only" ? 200 : 409)
+      .send(result);
+  });
+
   app.post("/foundry/manifest/import", async (request, reply) => {
-    const parsed = FoundryAgentImportInputSchema.safeParse(request.body);
+    const parsed =
+      FoundryAgentImportInputSchema.safeParse(request.body).success
+        ? FoundryAgentImportInputSchema.safeParse(request.body)
+        : FoundryAgentImportInputSchema.safeParse({
+            manifest: FoundryAgentManifestSchema.safeParse(request.body).success
+              ? request.body
+              : undefined
+          });
 
     if (!parsed.success) {
       return reply.code(400).send({

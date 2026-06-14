@@ -121,6 +121,42 @@ export const FoundryConnectedValidationSchema = z.object({
   validationStatement: z.string().min(1)
 });
 
+export const FoundryConnectedProbeStatusSchema = z.enum([
+  "disabled",
+  "missing_configuration",
+  "ready_for_manual_probe"
+]);
+
+export const FoundryConnectedProbeSchema = z.object({
+  enabled: z.boolean(),
+  status: FoundryConnectedProbeStatusSchema,
+  checkedAt: z.string().datetime(),
+  readiness: FoundryReadinessResultSchema,
+  requiredEnv: z.array(z.string().min(1)),
+  configuredEnv: z.array(z.string().min(1)),
+  missingEnv: z.array(z.string().min(1)),
+  attemptedLiveCall: z.literal(false),
+  safetyStatement: z.string().min(1)
+});
+
+export const FoundryConnectedRunStatusSchema = z.enum([
+  "disabled",
+  "missing_configuration",
+  "manual_only"
+]);
+
+export const FoundryConnectedRunSchema = z.object({
+  enabled: z.boolean(),
+  status: FoundryConnectedRunStatusSchema,
+  checkedAt: z.string().datetime(),
+  readiness: FoundryReadinessResultSchema,
+  attemptedLiveCall: z.literal(false),
+  runCreated: z.literal(false),
+  requiredUserInputs: z.array(z.string().min(1)),
+  blockedOperations: z.array(z.string().min(1)),
+  safetyStatement: z.string().min(1)
+});
+
 export const AgentTrustBoundarySchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
@@ -168,6 +204,8 @@ export type FoundryReadinessResult = z.infer<
 export type FoundryConnectedValidation = z.infer<
   typeof FoundryConnectedValidationSchema
 >;
+export type FoundryConnectedProbe = z.infer<typeof FoundryConnectedProbeSchema>;
+export type FoundryConnectedRun = z.infer<typeof FoundryConnectedRunSchema>;
 export type AgentTrustBoundary = z.infer<typeof AgentTrustBoundarySchema>;
 export type AgentTrustBoundaryMap = z.infer<
   typeof AgentTrustBoundaryMapSchema

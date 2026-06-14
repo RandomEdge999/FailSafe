@@ -7,6 +7,8 @@ import {
 } from "@failsafe/schemas";
 
 process.env.LOG_LEVEL = process.env.LOG_LEVEL ?? "fatal";
+process.env.FAILSAFE_ENABLE_SAMPLE_DATA =
+  process.env.FAILSAFE_ENABLE_SAMPLE_DATA ?? "1";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
@@ -149,7 +151,7 @@ async function main() {
 
   const sampleRun = await waitForRun(
     ScenarioRunSchema.parse(
-      await api("/runs/mock", {
+      await api("/runs/sample-lab", {
         body: JSON.stringify({
           projectId: "project-vulnerable-agent",
           scenarioPackId: "pack-tool-poisoning",
@@ -160,7 +162,7 @@ async function main() {
     ).id
   );
   const regression = RegressionArtifactSchema.parse(
-    await api("/regressions/mock", {
+    await api("/regressions/sample-lab", {
       body: JSON.stringify({
         runId: sampleRun.id,
         findingIds: sampleRun.findings.map((finding) => finding.id),

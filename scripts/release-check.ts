@@ -14,10 +14,19 @@ const requiredFiles = [
   "docs/final-ready-lock-list.md",
   "docs/submission-checklist.md",
   ".env.example",
+  "azure.yaml",
+  ".azure/deployment-plan.md",
+  "infra/main.bicep",
+  "apps/orchestrator-api/Dockerfile",
+  "apps/studio-web/Dockerfile",
+  "examples/foundry-manifests/invoice-review-agent.json",
+  "examples/foundry-evidence/invoice-review-recording.json",
   "docs/assets/brand/failsafe-logo.png",
   "docs/assets/brand/crash-lab-hero.png",
   "apps/studio-web/public/brand/failsafe-logo.png",
   "apps/studio-web/public/brand/crash-lab-hero.png",
+  "apps/studio-web/public/brand/generated/evidence-shield-platform.png",
+  "apps/studio-web/public/brand/generated/runner-readiness-platform.png",
   "docs/assets/screenshots/dashboard.png",
   "docs/assets/screenshots/timeline-finding-detail.png",
   "docs/assets/screenshots/patch-coach.png",
@@ -56,9 +65,13 @@ const skipDirs = new Set([
 
 const allowedCopyPatterns = [
   /\/runs\/mock/,
+  /\/runs\/sample-lab/,
   /\/regressions\/mock/,
+  /\/regressions\/sample-lab/,
   /\/regressions\/:id\/replay-mock/,
+  /\/regressions\/:id\/replay-sample-lab/,
   /replay-mock/,
+  /replay-sample-lab/,
   /mockReplayable/,
   /mockOnly/,
   /MOCK_SCENARIO_VERSION/,
@@ -176,13 +189,7 @@ const productFiles = [
   "docs/PRD.md",
   "docs/final-ready-lock-list.md",
   "docs/submission-checklist.md",
-  "apps/studio-web/components/AppShell.tsx",
-  "apps/studio-web/components/AgentOpsPanel.tsx",
-  "apps/studio-web/components/DashboardHeader.tsx",
-  "apps/studio-web/components/CopilotPromptPanel.tsx",
-  "apps/studio-web/components/CrashTimeline.tsx",
-  "apps/studio-web/components/RegressionPanel.tsx",
-  "apps/studio-web/components/ReportPanel.tsx"
+  "apps/studio-web/components/AppShell.tsx"
 ];
 
 for (const file of productFiles) {
@@ -227,11 +234,16 @@ for (const requiredText of [
   "Creative Apps",
   "Azure AI Foundry",
   "recorded agent evidence",
+  "How GitHub Copilot was used",
   "AI assistance disclosure",
   "Known intentional limits",
+  "FAILSAFE_ENABLE_LIVE_FOUNDRY",
+  "/foundry/connected/probe",
   "pnpm smoke:api",
   "pnpm smoke:cli",
-  "pnpm smoke:studio"
+  "pnpm smoke:studio",
+  "azure.yaml",
+  "azd"
 ]) {
   assert(readme.includes(requiredText), `README is missing required launch text: ${requiredText}`);
 }

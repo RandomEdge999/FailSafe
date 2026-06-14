@@ -62,7 +62,7 @@ const seedRunRecords = mockRuns.map((run) => [
 ]) satisfies Array<[string, SeedRunRecord]>;
 
 const storedRuns = new Map<string, RuntimeRunRecord>([
-  ...seedRunRecords,
+  ...(process.env.FAILSAFE_ENABLE_SAMPLE_DATA === "1" ? seedRunRecords : []),
   ...loadPersistedStore().runs.map((record) => [record.run.id, record] as const)
 ]);
 
@@ -82,8 +82,10 @@ export function storeCompletedRunRecord(record: StoredRunRecord) {
 export function resetRunState() {
   storedRuns.clear();
 
-  for (const [runId, record] of seedRunRecords) {
-    storedRuns.set(runId, record);
+  if (process.env.FAILSAFE_ENABLE_SAMPLE_DATA === "1") {
+    for (const [runId, record] of seedRunRecords) {
+      storedRuns.set(runId, record);
+    }
   }
 }
 
@@ -194,7 +196,7 @@ export function getRunComparison(id: string): ReplayComparison {
 
   if (!replayRun.baselineRunId) {
     throw requestError(
-      `Run ${id} is not a mock replay run with a baselineRunId.`,
+      `Run ${id} is not a replay run with a baselineRunId.`,
       "run_comparison_unavailable",
       409
     );
@@ -228,6 +230,14 @@ export function getRunReplayContext(id: string): RunReplayContext | undefined {
 }
 
 export function createMockRun(input: CreateMockRunInput) {
+  if (process.env.FAILSAFE_ENABLE_SAMPLE_DATA !== "1") {
+    throw requestError(
+      "Sample Lab runs are disabled. Import reviewed Foundry manifests or recorded evidence for launch-mode crash tests.",
+      "sample_lab_disabled",
+      409
+    );
+  }
+
   const { project, scenarioPack, agentTarget } = resolveRunContext(input);
   const createdAtMs = Date.now();
   const runId = `run-demo-${runSlug(scenarioPack.id.replace(/^pack-/, ""))}-${randomUUID().slice(0, 8)}`;
@@ -259,9 +269,17 @@ export function createMockRun(input: CreateMockRunInput) {
 }
 
 export function createMockReplayRun(regression: RegressionArtifact) {
+  if (process.env.FAILSAFE_ENABLE_SAMPLE_DATA !== "1") {
+    throw requestError(
+      "Sample Lab replay is disabled in launch mode. Use reviewed fixture replay for imported evidence.",
+      "sample_lab_disabled",
+      409
+    );
+  }
+
   if (!regression.mockReplayable) {
     throw requestError(
-      `Regression ${regression.id} is not marked as mock replayable.`,
+      `Regression ${regression.id} is not marked as Sample Lab replayable.`,
       "regression_not_replayable",
       409
     );
@@ -340,7 +358,10 @@ export function createFixtureReplayRun(
   }
 
   const project =
-    replayProject ?? mockProjects.find((item) => item.id === regression.projectId);
+    replayProject ??
+    (process.env.FAILSAFE_ENABLE_SAMPLE_DATA === "1"
+      ? mockProjects.find((item) => item.id === regression.projectId)
+      : undefined);
 
   if (!project) {
     throw requestError(

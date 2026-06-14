@@ -15,7 +15,7 @@ export function resetDemoData() {
 
   return {
     ok: true,
-    mode: "local_demo_reset",
+    mode: "local_evidence_reset",
     reset: [
       "runs",
       "regressions",
@@ -25,7 +25,12 @@ export function resetDemoData() {
       "foundryImports",
       "evidenceCaptures"
     ],
-    preserved: ["seed projects", "seed scenarios", "seed run"],
+    preserved: [
+      "reviewed scenario definitions",
+      ...(process.env.FAILSAFE_ENABLE_SAMPLE_DATA === "1"
+        ? ["explicit Sample Lab fixtures"]
+        : [])
+    ],
     safety:
       "Only the app-owned .failsafe-data store was reset. No project files, user paths, shell commands, network calls, MCP servers, model calls, email, or databases were touched."
   };

@@ -1,0 +1,20 @@
+name: failsafe
+metadata:
+  template: failsafe-aca@0.1.0
+infra:
+  provider: bicep
+services:
+  api:
+    project: .
+    host: containerapp
+    language: ts
+    docker:
+      path: apps/orchestrator-api/Dockerfile
+      context: .
+  web:
+    project: .
+    host: containerapp
+    language: ts
+    docker:
+      path: apps/studio-web/Dockerfile
+      context: .

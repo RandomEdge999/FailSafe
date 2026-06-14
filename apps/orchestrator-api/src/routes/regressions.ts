@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { CreateMockRegressionInputSchema } from "@failsafe/schemas";
 import {
   createMockRegression,
@@ -29,24 +29,35 @@ export async function registerRegressionRoutes(app: FastifyInstance) {
     return regression;
   });
 
-  app.post("/regressions/mock", async (request, reply) => {
+  async function handleCreateRegression(
+    request: FastifyRequest,
+    reply: FastifyReply
+  ) {
     const parsed = CreateMockRegressionInputSchema.safeParse(request.body);
 
     if (!parsed.success) {
       return reply.code(400).send({
-        error: "invalid_mock_regression_input",
+        error: "invalid_regression_input",
         issues: parsed.error.issues
       });
     }
 
     return reply.code(201).send(createMockRegression(parsed.data));
-  });
+  }
 
-  app.post("/regressions/:id/replay-mock", async (request, reply) => {
+  async function handleReplaySampleLab(
+    request: FastifyRequest,
+    reply: FastifyReply
+  ) {
     const { id } = request.params as { id: string };
 
     return reply.code(201).send(replayMockRegression(id));
-  });
+  }
+
+  app.post("/regressions/sample-lab", handleCreateRegression);
+  app.post("/regressions/mock", handleCreateRegression);
+  app.post("/regressions/:id/replay-sample-lab", handleReplaySampleLab);
+  app.post("/regressions/:id/replay-mock", handleReplaySampleLab);
 
   app.post("/regressions/:id/sandbox-plan", async (request) => {
     const { id } = request.params as { id: string };

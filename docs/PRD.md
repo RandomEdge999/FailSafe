@@ -18,8 +18,10 @@ Given a reviewed Foundry manifest or reviewed recorded agent evidence, FailSafe 
 ## Must have
 
 - Foundry readiness screen.
+- Gated connected Foundry probe/run readiness endpoints that create no live run by default.
 - Manifest import.
 - Recorded evidence import.
+- Explicit sample import actions for reviewed app-owned manifest and evidence examples.
 - Agent inventory.
 - Agent detail and trust map.
 - Local crash-test runner.
@@ -35,6 +37,7 @@ Given a reviewed Foundry manifest or reviewed recorded agent evidence, FailSafe 
 ## Must not
 
 - Claim live Foundry execution without implementing and verifying it.
+- Treat connected Foundry probe/run readiness as production execution.
 - Claim live GitHub Copilot usage from the app.
 - Store credentials.
 - Execute arbitrary shell commands.

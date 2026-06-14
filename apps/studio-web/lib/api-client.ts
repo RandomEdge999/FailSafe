@@ -8,6 +8,7 @@ import {
   FoundryAgentImportSchema,
   FoundryReadinessResultSchema,
   AgentTrustBoundaryMapSchema,
+  ImportAgentEvidenceInputSchema,
   FixtureReplayResultSchema,
   PatchCoachPlanSchema,
   ProjectSchema,
@@ -25,6 +26,7 @@ import {
   type FoundryAgentImport,
   type FoundryAgentImportInput,
   type FoundryReadinessResult,
+  type ImportAgentEvidenceInput,
   type AgentTrustBoundaryMap,
   type FixtureReplayResult,
   type PatchCoachPlan,
@@ -44,7 +46,7 @@ const apiBaseUrl =
 export type ApiHealth = {
   ok: boolean;
   service: string;
-  mode: "mock" | "local";
+  mode: "local_evidence";
   timestamp: string;
 };
 
@@ -248,6 +250,21 @@ export function importSampleEvidence(): Promise<AgentEvidenceCapture> {
   );
 }
 
+export function importAgentEvidence(
+  input: ImportAgentEvidenceInput
+): Promise<AgentEvidenceCapture> {
+  const body = ImportAgentEvidenceInputSchema.parse(input);
+
+  return requestJson(
+    "/foundry/evidence/import",
+    (value) => AgentEvidenceCaptureSchema.parse(value),
+    {
+      body: JSON.stringify(body),
+      method: "POST"
+    }
+  );
+}
+
 export function listEvidenceCaptures(): Promise<AgentEvidenceCapture[]> {
   return requestJson("/foundry/evidence", (value) =>
     AgentEvidenceCaptureSchema.array().parse(value)
@@ -338,7 +355,7 @@ export function createMockRun(input: CreateMockRunInput): Promise<ScenarioRun> {
   const body = CreateMockRunInputSchema.parse(input);
 
   return requestJson(
-    "/runs/mock",
+    "/runs/sample-lab",
     (value) => ScenarioRunSchema.parse(value),
     {
       body: JSON.stringify(body),
@@ -373,7 +390,7 @@ export function saveRegression(
   const body = CreateMockRegressionInputSchema.parse(input);
 
   return requestJson(
-    "/regressions/mock",
+    "/regressions/sample-lab",
     (value) => RegressionArtifactSchema.parse(value),
     {
       body: JSON.stringify(body),
@@ -384,7 +401,7 @@ export function saveRegression(
 
 export function replayMockRegression(id: string): Promise<ScenarioRun> {
   return requestJson(
-    `/regressions/${id}/replay-mock`,
+    `/regressions/${id}/replay-sample-lab`,
     (value) => ScenarioRunSchema.parse(value),
     {
       body: "{}",

@@ -135,7 +135,7 @@ export function createMockRegression(input: CreateMockRegressionInput) {
   const baseName =
     input.name ??
     `${scenarioPack?.name ?? run.scenarioPackId} regression - ${firstFinding?.category ?? "trace"}`;
-  const slug = slugify(baseName) || "mock-regression";
+  const slug = slugify(baseName) || "trace-regression";
   const id = `regression-${slug}-${randomUUID().slice(0, 6)}`;
 
   const regression = RegressionArtifactSchema.parse({
@@ -154,14 +154,14 @@ export function createMockRegression(input: CreateMockRegressionInput) {
     name: baseName,
     description:
       input.description ??
-      `${mockReplayable ? "Sample lab" : "Foundry manifest"} regression artifact saved from ${run.id}. It captures reviewed trace evidence and expected safe behavior for future replay wiring.`,
+      `${mockReplayable ? "Sample Lab" : "Recorded evidence"} regression artifact saved from ${run.id}. It captures reviewed trace evidence and expected safe behavior for future replay wiring.`,
     createdAt: new Date().toISOString(),
-    status: "mock_saved",
+    status: "ready_for_replay",
     replayCommand: mockReplayable
-      ? `POST /regressions/${id}/replay-mock`
+      ? `POST /regressions/${id}/replay-sample-lab`
       : `POST /agents/{agent-import-id}/fixture-replay`,
     expectedSafeBehavior: scenarioPack?.expectedSafeBehavior ?? [
-      "Keep dangerous actions mocked until a reviewed sandbox runner exists."
+      "Keep dangerous actions blocked until a reviewed sandbox runner exists."
     ],
     expectedFindingCategories:
       expectedFindingCategories.length > 0
@@ -207,7 +207,7 @@ export function createSandboxPlanForRegression(
 
   if (!baselineRun) {
     throw requestError(
-      `Baseline run ${regression.runId} was not found in the local FailSafe store. Recreate the mock run and regression if demo data was reset.`,
+      `Baseline run ${regression.runId} was not found in the local FailSafe store. Recreate the Sample Lab run and regression if local evidence was reset.`,
       "baseline_run_not_found",
       404
     );

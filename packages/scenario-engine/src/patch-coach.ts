@@ -176,7 +176,7 @@ export function createPatchCoachPlan(input: PatchCoachInput): PatchCoachPlan {
         rationale: pattern.summary,
         implementationNotes: pattern.steps,
         verification: [
-          "Run the deterministic mock replay for the saved regression.",
+          "Run the deterministic Sample Lab replay for the saved regression.",
           "Run the reviewed fixture-only replay after the regression is saved.",
           "Confirm blocked high-risk actions remain blocked and trace evidence is still emitted."
         ]
@@ -241,9 +241,9 @@ export function createPatchCoachPlan(input: PatchCoachInput): PatchCoachPlan {
     ],
     regressionChecklist: [
       "Regression artifact saved from a terminal run.",
-      "Deterministic mock replay still links back to the baseline run.",
+      "Deterministic Sample Lab replay still links back to the baseline run.",
       "Fixture-only replay uses reviewed app-owned fixture IDs.",
-      "Report export states limitations and mock-only status."
+      "Report export states limitations and local-evidence status."
     ],
     safetyBoundaries: [
       "Patch Coach creates Copilot-ready prompt payloads only.",

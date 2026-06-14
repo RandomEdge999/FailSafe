@@ -1,6 +1,6 @@
 # Final Ready Lock List
 
-Date: 2026-06-09
+Date: 2026-06-11
 
 ## Locked product claim
 
@@ -8,9 +8,14 @@ FailSafe is a local defensive crash-test studio for Microsoft Foundry and Copilo
 
 FailSafe remains defensive, local, typed, and reviewed.
 
+Launch-mode state starts empty. Reviewed example fixtures exist for onboarding and smoke tests, but the app does not automatically seed sample production data.
+
+The Studio exposes user-clicked `Use sample manifest` and `Use sample evidence` actions for the reviewed examples. These are explicit demo actions, not silent launch seeding.
+
 ## Locked non-claims
 
 - No live Foundry execution.
+- No connected Foundry run unless `FAILSAFE_ENABLE_LIVE_FOUNDRY=1` is intentionally set, local Azure credentials exist, and a reviewed integration is promoted.
 - No live MCP execution.
 - No live model calls.
 - No app-invoked Copilot session.
@@ -33,6 +38,14 @@ pnpm smoke:cli
 pnpm smoke:studio
 ```
 
+Azure Developer CLI validation/deploy commands when `azd` is installed:
+
+```bash
+azd auth login
+azd env new failsafe
+azd up
+```
+
 ## Required screenshots
 
 - `docs/assets/screenshots/dashboard.png`
@@ -52,6 +65,8 @@ pnpm smoke:studio
 - `docs/submission-checklist.md` for official-rule mapping.
 - `docs/architecture.md`, `docs/design.md`, and `docs/safety-policy.md`.
 - `.env.example` with no active secrets.
+- Azure deployment scaffold: `azure.yaml`, `infra/main.bicep`, `.azure/deployment-plan.md`, and service Dockerfiles.
+- Reviewed import examples: `examples/foundry-manifests/invoice-review-agent.json` and `examples/foundry-evidence/invoice-review-recording.json`.
 
 ## Submitter-owned items
 
@@ -63,3 +78,9 @@ pnpm smoke:studio
 ## Protected local file
 
 `FailSafe_PRD.md` is private local direction. It must remain untracked and unstaged.
+
+## Final submission gates
+
+- Confirm README includes `FAILSAFE_ENABLE_LIVE_FOUNDRY`, `/foundry/connected/probe`, and the demo-grade hosted deployment caveat.
+- Confirm hosted deployments keep `FAILSAFE_ENABLE_SAMPLE_DATA=0`.
+- Confirm the demo video includes a real VS Code/GitHub Copilot Chat step using the Patch Coach payload.

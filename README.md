@@ -4,6 +4,8 @@ Crash-test AI agents before production does.
 
 FailSafe is a Microsoft Foundry-ready crash-test studio for agent builders. It imports reviewed Foundry-style manifests or reviewed recorded agent evidence, maps trust boundaries, runs local defensive crash tests, produces findings, prepares Patch Coach prompt payloads, saves regressions, replays reviewed fixtures, and exports Safety Cards without executing live tools or storing credentials.
 
+Launch-mode default: FailSafe starts with an empty evidence store. It does not silently seed sample production data. Reviewed example JSON files are included under `examples/` for onboarding and smoke tests, but they are imported only when a user, CLI command, or test explicitly loads them.
+
 ![FailSafe dashboard](docs/assets/screenshots/dashboard.png)
 
 ## 2-minute pitch
@@ -12,7 +14,7 @@ Agent teams can build powerful Copilot-style and Azure AI Foundry agents quickly
 
 1. Import a reviewed Foundry manifest or recorded agent evidence.
 2. Map instructions, tools, identity, RBAC, observability, approvals, and trust boundaries.
-3. Run local crash tests for prompt injection, tool metadata poisoning, and approval bypass.
+3. Run local crash tests for prompt injection, tool metadata poisoning, approval bypass, tool-output injection, and data-exfiltration attempts.
 4. Inspect timeline evidence and root-cause findings.
 5. Generate Patch Coach mitigation prompts for human review.
 6. Save a regression, replay reviewed fixtures, compare baseline vs replay evidence, and export a Safety Card.
@@ -47,16 +49,19 @@ Official research reflected in this repo:
 - Fluent-inspired Studio shell with command bar, navigation rail, Foundry operations panel, crash timeline, evidence inspector, patch/regression workspace, and Safety Card workspace.
 - Fastify orchestrator API with typed Zod contracts.
 - Foundry readiness validation for optional environment configuration.
-- Reviewed Foundry-style manifest import.
-- Reviewed recorded agent evidence import from JSON request bodies.
+- Reviewed Foundry-style manifest import from user-provided JSON.
+- Reviewed recorded agent evidence import from user-provided JSON request bodies or browser file upload.
+- Explicit app-owned sample buttons for the reviewed Foundry manifest and reviewed recorded evidence. Samples are loaded only after a user action.
 - Agent inventory and detail view.
 - Trust-boundary map across user input, instructions, tools, identity/RBAC, approval gates, and policy decisions.
 - Foundry manifest crash tests and fixture replay.
 - Recorded-evidence crash tests.
-- Sample Lab compatibility route for deterministic local fallback.
-- Scenario packs for tool metadata poisoning, indirect prompt injection, and approval bypass.
+- Gated connected Foundry probe/run endpoints that stay disabled by default and report that no live call was attempted.
+- Sample Lab compatibility routes are disabled by default and require `FAILSAFE_ENABLE_SAMPLE_DATA=1`.
+- Scenario packs for tool metadata poisoning, indirect prompt injection, approval bypass, tool-output injection, and data exfiltration.
 - Findings, trace timeline, risk score, Patch Coach plans, regression artifacts, replay comparison, sandbox plan, fixture replay, and Safety Card reports.
 - CLI coverage for readiness, manifest import, evidence import, trust maps, crash tests, fixture replay, Patch Coach, reports, runner dry-run, and reset.
+- Azure Container Apps deployment scaffold through Azure Developer CLI.
 - Release, API, CLI, and Studio smoke checks.
 
 ## Architecture
@@ -74,6 +79,7 @@ flowchart LR
   Engine --> Replay[Regression and Fixture Replay]
   Findings --> Patch[Patch Coach Prompt Payloads]
   Replay --> Report[Safety Card Markdown Export]
+  Studio --> Azure[Azure Container Apps Deployment]
 ```
 
 Repository layout:
@@ -87,6 +93,8 @@ packages/scenario-engine    Local crash-test, replay, Patch Coach, and sandbox-p
 packages/scoring-engine     Crash-score heuristic
 packages/trace-model        Trace and timeline helpers
 examples/vulnerable-agent   Local Sample Lab fixture target
+examples/foundry-manifests  Reviewed manifest JSON import examples
+examples/foundry-evidence   Reviewed evidence JSON import examples
 docs/                       Architecture, design, safety, demo, and submission materials
 ```
 
@@ -106,7 +114,7 @@ FailSafe is defensive and local-first. The current product does not:
 - invoke GitHub Copilot from the app;
 - claim fixture replay is production proof.
 
-Compatibility endpoints such as `POST /runs/mock` and `POST /regressions/:id/replay-mock` remain because earlier scripts and docs used them. Product-facing copy names that path Sample Lab compatibility.
+Sample Lab endpoints such as `POST /runs/sample-lab` and `POST /regressions/:id/replay-sample-lab` remain for deterministic local test coverage. Older `/mock` aliases are preserved for compatibility. These routes are disabled unless `FAILSAFE_ENABLE_SAMPLE_DATA=1` is set. Launch deployments should leave that flag disabled.
 
 ## Run locally
 
@@ -132,15 +140,24 @@ pnpm dev:api
 pnpm dev:web
 ```
 
+Git Bash one-command local launch:
+
+```bash
+./start.sh
+```
+
 ## Environment
 
-`.env.example` contains local defaults only. Foundry variables are optional and commented because this repo performs readiness validation only.
+`.env.example` contains local defaults only. Foundry variables are optional and commented because this repo performs manifest/evidence checks by default. Live Foundry remains disabled unless the backend flag is explicitly set for a reviewed local probe.
 
 ```bash
 NEXT_PUBLIC_API_BASE_URL=http://localhost:4000
+ORCHESTRATOR_API_BASE_URL=http://localhost:4000
 ORCHESTRATOR_API_PORT=4000
+FAILSAFE_ENABLE_SAMPLE_DATA=0
+FAILSAFE_ENABLE_LIVE_FOUNDRY=0
 
-# Optional readiness validation only:
+# Optional server-side Foundry probe metadata:
 # AZURE_FOUNDRY_PROJECT_ENDPOINT=
 # AZURE_FOUNDRY_AGENT_ID=
 # AZURE_TENANT_ID=
@@ -148,6 +165,29 @@ ORCHESTRATOR_API_PORT=4000
 ```
 
 Do not commit `.env`, credentials, or live service endpoints.
+
+## Azure deployment
+
+The repo includes Azure Container Apps deployment scaffolding:
+
+- `azure.yaml`
+- `infra/main.bicep`
+- `apps/orchestrator-api/Dockerfile`
+- `apps/studio-web/Dockerfile`
+- `.azure/deployment-plan.md`
+
+Expected deploy path after installing Azure Developer CLI:
+
+```bash
+azd auth login
+azd env new failsafe
+azd env set AZURE_LOCATION <region>
+azd up
+```
+
+Hosted launch mode should keep `FAILSAFE_ENABLE_SAMPLE_DATA=0`. The web container calls the API through same-origin `/api/failsafe/*`; `ORCHESTRATOR_API_BASE_URL` is injected into the web container at runtime by the infrastructure template.
+
+Hosted mode is a hackathon demo scaffold, not a production SaaS deployment. The API has no authentication, app-owned local JSON persistence is ephemeral in Container Apps, and live Foundry execution remains blocked unless a reviewed server-side integration is promoted.
 
 ## Verification
 
@@ -195,6 +235,8 @@ pnpm failsafe runner preview
 pnpm failsafe reset-demo-data
 ```
 
+`import-sample` commands are explicit onboarding shortcuts. Production-style browser use should import reviewed JSON files through the Studio or post validated JSON to the API.
+
 ## API examples
 
 Import the reviewed Foundry-style manifest:
@@ -202,13 +244,15 @@ Import the reviewed Foundry-style manifest:
 ```bash
 curl -s http://localhost:4000/foundry/manifest/import \
   -H "content-type: application/json" \
-  -d "{\"source\":\"sample\"}"
+  --data-binary @examples/foundry-manifests/invoice-review-agent.json
 ```
 
 Import reviewed recorded agent evidence:
 
 ```bash
-pnpm failsafe evidence import-sample
+curl -s http://localhost:4000/foundry/evidence/import \
+  -H "content-type: application/json" \
+  --data-binary @examples/foundry-evidence/invoice-review-recording.json
 ```
 
 Run a local crash test for an imported agent:
@@ -225,6 +269,15 @@ Run a local recorded-evidence crash test:
 curl -s http://localhost:4000/foundry/evidence/<evidence-id>/crash-test \
   -H "content-type: application/json" \
   -d "{\"scenarioPackId\":\"pack-tool-poisoning\"}"
+```
+
+Check the disabled connected Foundry gate:
+
+```bash
+curl -s http://localhost:4000/foundry/connected/probe
+curl -s http://localhost:4000/foundry/connected/run \
+  -H "content-type: application/json" \
+  -d "{}"
 ```
 
 Export a Safety Card:
@@ -262,8 +315,8 @@ App-owned brand assets:
 ## Demo flow
 
 1. Open the Studio.
-2. Import the reviewed Foundry manifest.
-3. Load recorded evidence.
+2. Import the reviewed Foundry manifest or click Use sample manifest.
+3. Load recorded evidence or click Use sample evidence.
 4. Show readiness and blocked capabilities.
 5. Show the trust-boundary map.
 6. Run a recorded-evidence crash test.
@@ -288,6 +341,18 @@ Required submitter-owned items are not invented in this repo:
 - project description;
 - team/member information and Microsoft Learn usernames, if applicable.
 
+## How GitHub Copilot was used
+
+FailSafe is designed for a real Copilot-assisted remediation moment in the submission video:
+
+1. Run a crash test and open Fix with Copilot.
+2. Copy the Patch Coach payload for the selected finding.
+3. Paste that payload into VS Code with GitHub Copilot Chat.
+4. Ask Copilot to draft a guardrail or regression test from the payload.
+5. Show the human review step before accepting or adapting the suggestion.
+
+Repository support for this workflow is included in `.github/copilot-instructions.md`, `.github/prompts/`, `agents/`, and the Patch Coach payloads generated by the Studio and CLI. FailSafe prepares Copilot-ready context; the app does not call Copilot or claim that Copilot authored code.
+
 ## AI assistance disclosure
 
 This repository contains GitHub Copilot-ready instructions, prompt files, custom agent instruction files, and Patch Coach payloads. Those artifacts show how a submitter can use Copilot for bounded defensive remediation.
@@ -297,13 +362,13 @@ This final completion pass was implemented with Codex in a local repository. Fai
 ## Known intentional limits
 
 - Live Foundry execution is not implemented.
-- Foundry connected validation is readiness-only and makes no network call.
-- Recorded evidence import accepts JSON request bodies only.
+- Foundry connected validation, `GET /foundry/connected/probe`, and `POST /foundry/connected/run` are gated readiness paths. They make no network call and report `attemptedLiveCall: false` by default.
+- Recorded evidence import accepts reviewed JSON only.
 - Fixture replay uses reviewed app-owned fixtures only.
-- Sample Lab compatibility routes are deterministic local fallback, not live agent execution.
+- Sample Lab compatibility routes require explicit opt-in and are not enabled in launch deployments.
 - Patch Coach generates prompt payloads only.
 - Safety Cards are local evidence summaries, not certifications.
-- Authentication, deployment infrastructure, external persistence, live MCP tools, live model calls, and real sandbox isolation are future work.
+- Authentication, external persistence, live MCP tools, live model calls, and real sandbox isolation are future work.
 
 ## License
 

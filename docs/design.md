@@ -20,7 +20,7 @@ The shell has four modes:
 - Patch and regression
 - Safety card
 
-The first viewport starts with the Foundry operations panel: readiness, import actions, recorded evidence, manifest inventory, trust map, and crash-test actions. A right evidence inspector keeps risk profile and report actions available without burying the workflow.
+The first viewport starts with the Foundry operations panel: readiness, file import actions, explicit sample import actions, recorded evidence, manifest inventory, trust map, and crash-test actions. A right evidence inspector keeps risk profile and report actions available without burying the workflow.
 
 ## Trust-boundary visualization
 
@@ -31,7 +31,9 @@ The trust map uses step cards for user input, instructions, tools, identity/RBAC
 Empty states tell the operator the next action:
 
 - import reviewed manifest;
+- use the reviewed sample manifest;
 - load recorded evidence;
+- use the reviewed sample evidence;
 - run Sample Lab fallback;
 - export a Safety Card;
 - save a regression before fixture replay.
@@ -50,5 +52,7 @@ The product mark and hero visual are app-owned deterministic PNGs:
 - `docs/assets/brand/crash-lab-hero.png`
 - `apps/studio-web/public/brand/failsafe-logo.png`
 - `apps/studio-web/public/brand/crash-lab-hero.png`
+- `apps/studio-web/public/brand/generated/evidence-shield-platform.png`
+- `apps/studio-web/public/brand/generated/runner-readiness-platform.png`
 
 They use shield and trust-boundary lattice motifs to support the product story without decorative filler.

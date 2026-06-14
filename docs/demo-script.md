@@ -1,6 +1,6 @@
 # Five-minute demo script
 
-Goal: show FailSafe as a Microsoft Foundry-ready crash-test studio that produces honest local evidence without claiming live Foundry execution.
+Goal: show FailSafe as a Microsoft Foundry-ready crash-test studio that produces honest local evidence without claiming live Foundry execution or silently seeding sample production data.
 
 ## 0:00 to 0:30 - Set up the problem
 
@@ -10,15 +10,15 @@ Show the Studio dashboard.
 
 ## 0:30 to 1:15 - Foundry evidence workflow
 
-Click `Import manifest`.
+Click `Import manifest` and choose `examples/foundry-manifests/invoice-review-agent.json`, or click `Use sample manifest` to load the same reviewed app-owned sample.
 
-Click `Load recorded evidence`.
+Click `Load recorded evidence` and choose `examples/foundry-evidence/invoice-review-recording.json`, or click `Use sample evidence` to load the same reviewed app-owned sample.
 
 Show readiness:
 
 - manifest mode if Foundry env vars are absent;
 - blocked capabilities include live tools, MCP execution, shell, arbitrary files, email, database, and external targets;
-- recorded evidence is JSON-body import only.
+- recorded evidence is reviewed JSON import only.
 
 Show agent inventory and recorded evidence cards.
 
@@ -32,7 +32,7 @@ Narration:
 
 ## 2:00 to 2:50 - Crash test and finding
 
-Click `Crash-test evidence`.
+Click `Run Crash Test` for the recorded evidence path. If both manifest and evidence are loaded, the manifest card also has `Crash-test manifest` for the manifest-only path.
 
 Open the crash timeline and finding detail.
 
@@ -49,6 +49,8 @@ Show the Patch Coach plan and prompt payload.
 Narration:
 
 "FailSafe does not invoke Copilot or edit files. It prepares a bounded Copilot-ready prompt payload with evidence, constraints, and regression expectations. A developer reviews and applies any real patch."
+
+Video proof moment: paste the Patch Coach payload into VS Code with GitHub Copilot Chat and show Copilot helping draft one guardrail or regression. Keep the narration clear that this is the real Copilot interaction; FailSafe only prepared the bounded context.
 
 ## 3:30 to 4:15 - Regression and replay
 

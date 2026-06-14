@@ -6,6 +6,8 @@ import {
   EvidenceCrashTestResponseSchema,
   FixtureReplayResultSchema,
   FoundryAgentImportSchema,
+  FoundryConnectedProbeSchema,
+  FoundryConnectedRunSchema,
   FoundryConnectedValidationSchema,
   FoundryReadinessResultSchema,
   PatchCoachPlanSchema,
@@ -20,6 +22,9 @@ import {
 } from "@failsafe/schemas";
 
 process.env.LOG_LEVEL = process.env.LOG_LEVEL ?? "fatal";
+process.env.FAILSAFE_ENABLE_SAMPLE_DATA =
+  process.env.FAILSAFE_ENABLE_SAMPLE_DATA ?? "1";
+process.env.FAILSAFE_ENABLE_LIVE_FOUNDRY = "0";
 
 type HttpMethod = "GET" | "POST";
 
@@ -105,6 +110,22 @@ async function main() {
     "Connected validation did not state that no live Foundry call occurred."
   );
 
+  const connectedProbe = FoundryConnectedProbeSchema.parse(
+    await request("GET", "/foundry/connected/probe")
+  );
+  assert(
+    connectedProbe.attemptedLiveCall === false,
+    "Connected Foundry probe attempted a live call."
+  );
+
+  const connectedRun = FoundryConnectedRunSchema.parse(
+    await request("POST", "/foundry/connected/run", {}, 409)
+  );
+  assert(
+    connectedRun.runCreated === false && connectedRun.attemptedLiveCall === false,
+    "Connected Foundry run should be blocked without creating a live run."
+  );
+
   const foundryAgent = FoundryAgentImportSchema.parse(
     await request("POST", "/foundry/manifest/import", { source: "sample" })
   );
@@ -179,11 +200,11 @@ async function main() {
   const scenarios = ScenarioPackSchema.array().parse(
     await request("GET", "/scenarios")
   );
-  assert(scenarios.length === 3, "Expected three starter scenario packs.");
+  assert(scenarios.length === 5, "Expected five starter scenario packs.");
 
   const sampleRun = await waitForRun(
     ScenarioRunSchema.parse(
-      await request("POST", "/runs/mock", {
+      await request("POST", "/runs/sample-lab", {
         projectId: "project-vulnerable-agent",
         scenarioPackId: "pack-tool-poisoning",
         agentTargetId: "agent-invoice-reviewer"
@@ -206,7 +227,7 @@ async function main() {
   );
 
   const regression = RegressionArtifactSchema.parse(
-    await request("POST", "/regressions/mock", {
+    await request("POST", "/regressions/sample-lab", {
       runId: sampleRun.id,
       findingIds: sampleRun.findings.map((finding) => finding.id),
       traceEventIds: sampleRun.trace.map((event) => event.id),
@@ -217,7 +238,7 @@ async function main() {
 
   const replayRun = await waitForRun(
     ScenarioRunSchema.parse(
-      await request("POST", `/regressions/${regression.id}/replay-mock`, {})
+      await request("POST", `/regressions/${regression.id}/replay-sample-lab`, {})
     ).id
   );
   const comparison = ReplayComparisonSchema.parse(

@@ -1,6 +1,8 @@
 import {
   FoundryAgentImportInputSchema,
   FoundryAgentImportSchema,
+  FoundryConnectedProbeSchema,
+  FoundryConnectedRunSchema,
   FoundryConnectedValidationSchema,
   FoundryReadinessResultSchema,
   AgentTrustBoundaryMapSchema,
@@ -10,6 +12,8 @@ import {
   type FoundryAgentImport,
   type FoundryAgentImportInput,
   type FoundryAgentManifest,
+  type FoundryConnectedProbe,
+  type FoundryConnectedRun,
   type FoundryConnectedValidation,
   type FoundryReadinessResult,
   type Project,
@@ -31,7 +35,8 @@ import { storeCompletedRunRecord } from "./run-service";
 const foundryEnvNames = [
   "AZURE_FOUNDRY_PROJECT_ENDPOINT",
   "AZURE_FOUNDRY_AGENT_ID",
-  "AZURE_TENANT_ID"
+  "AZURE_TENANT_ID",
+  "AZURE_FOUNDRY_MODEL_DEPLOYMENT"
 ];
 
 const blockedOperations = [
@@ -77,6 +82,10 @@ function missingEnv() {
   return foundryEnvNames.filter((name) => !process.env[name]);
 }
 
+function liveFoundryEnabled() {
+  return process.env.FAILSAFE_ENABLE_LIVE_FOUNDRY === "1";
+}
+
 export function getFoundryReadiness(): FoundryReadinessResult {
   const configured = configuredEnv();
   const missing = missingEnv();
@@ -110,6 +119,62 @@ export function validateConnectedFoundry(): FoundryConnectedValidation {
     validationStatement: readiness.configured
       ? "Foundry environment variables are present for opt-in connected validation. This endpoint performed configuration validation only and did not call Foundry or execute tools."
       : "Connected Foundry validation is not ready. Add environment variables locally, then explicitly retry. No network call was made."
+  });
+}
+
+export function probeConnectedFoundry(): FoundryConnectedProbe {
+  const readiness = getFoundryReadiness();
+  const enabled = liveFoundryEnabled();
+  const status = !enabled
+    ? "disabled"
+    : readiness.configured
+      ? "ready_for_manual_probe"
+      : "missing_configuration";
+
+  return FoundryConnectedProbeSchema.parse({
+    enabled,
+    status,
+    checkedAt: new Date().toISOString(),
+    readiness,
+    requiredEnv: foundryEnvNames,
+    configuredEnv: readiness.configuredEnv,
+    missingEnv: readiness.missingEnv,
+    attemptedLiveCall: false,
+    safetyStatement: enabled
+      ? "Live Foundry probing is opt-in, but this endpoint only verifies local readiness metadata. It did not call Foundry or execute tools."
+      : "Live Foundry probing is disabled. Set FAILSAFE_ENABLE_LIVE_FOUNDRY=1 with local Azure credentials to move beyond manifest-only readiness."
+  });
+}
+
+export function runConnectedFoundry(): FoundryConnectedRun {
+  const readiness = getFoundryReadiness();
+  const enabled = liveFoundryEnabled();
+  const status = !enabled
+    ? "disabled"
+    : readiness.configured
+      ? "manual_only"
+      : "missing_configuration";
+
+  return FoundryConnectedRunSchema.parse({
+    enabled,
+    status,
+    checkedAt: new Date().toISOString(),
+    readiness,
+    attemptedLiveCall: false,
+    runCreated: false,
+    requiredUserInputs: [
+      "Installed and logged-in Azure CLI",
+      "Azure subscription with Microsoft Foundry access",
+      "AZURE_FOUNDRY_PROJECT_ENDPOINT",
+      "AZURE_FOUNDRY_AGENT_ID",
+      "AZURE_TENANT_ID",
+      "AZURE_FOUNDRY_MODEL_DEPLOYMENT"
+    ],
+    blockedOperations,
+    safetyStatement:
+      status === "manual_only"
+        ? "Connected Foundry inputs are present, but FailSafe does not create live runs from this demo route. Use the verified local evidence flow unless a reviewed SDK integration is promoted."
+        : "Connected Foundry run is blocked. FailSafe did not call Foundry, execute tools, store credentials, or create an external run."
   });
 }
 

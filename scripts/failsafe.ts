@@ -138,7 +138,7 @@ Usage:
   pnpm failsafe replay <regression-id>
 
 Behavior:
-  Calls POST /regressions/:id/replay-mock on the running local API, then polls
+  Calls POST /regressions/:id/replay-sample-lab on the running local API, then polls
   GET /runs/:id until the replay leaves queued/running.
 
 Notes:
@@ -463,7 +463,7 @@ async function listRegressions() {
 
   if (regressions.length === 0) {
     console.log(
-      "No local Sample Lab regressions found. Create one in the Studio or through the compatibility `POST /regressions/mock` route."
+      "No local Sample Lab regressions found. Create one in the Studio or through `POST /regressions/sample-lab`."
     );
     return;
   }
@@ -558,7 +558,7 @@ async function replayRegression(regressionId: string | undefined) {
   }
 
   const createdRun = await requestJson(
-    `/regressions/${encodeURIComponent(regressionId)}/replay-mock`,
+    `/regressions/${encodeURIComponent(regressionId)}/replay-sample-lab`,
     (value) => ScenarioRunSchema.parse(value),
     {
       body: "{}",

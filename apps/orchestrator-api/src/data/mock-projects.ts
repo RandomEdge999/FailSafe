@@ -5,7 +5,7 @@ export const mockProjects: Project[] = ProjectSchema.array().parse([
     id: "project-vulnerable-agent",
     name: "Vulnerable Invoice Agent",
     description:
-      "Demo-only local mock agent that reviews invoices, summarizes vendor notes, and can request high-risk file tools.",
+      "Sample Lab local fixture that reviews invoices, summarizes vendor notes, and can request high-risk file tools.",
     repoPath: "examples/vulnerable-agent",
     createdAt: "2026-06-05T06:00:00.000Z",
     updatedAt: "2026-06-05T06:00:00.000Z",
@@ -20,7 +20,7 @@ export const mockProjects: Project[] = ProjectSchema.array().parse([
       {
         id: "agent-invoice-reviewer",
         projectId: "project-vulnerable-agent",
-        name: "Invoice Reviewer Mock Agent",
+        name: "Invoice Reviewer Sample Agent",
         type: "mock-agent",
         entrypoint: "examples/vulnerable-agent/agent-config.json",
         instructionFiles: ["README.md", "agent-config.json"],
@@ -65,7 +65,7 @@ export const mockProjects: Project[] = ProjectSchema.array().parse([
         id: "tool-read-private-notes",
         name: "read_private_notes",
         description:
-          "Mock high-risk file-reading capability used only to demonstrate approval and scope boundaries.",
+          "Synthetic high-risk file-reading capability used only to demonstrate approval and scope boundaries.",
         source: "mock",
         riskLevel: "high",
         requiresApproval: true,

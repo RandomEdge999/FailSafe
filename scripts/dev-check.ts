@@ -22,6 +22,8 @@ import {
   FixtureReplayResultSchema,
   FoundryAgentImportSchema,
   FoundryAgentManifestSchema,
+  FoundryConnectedProbeSchema,
+  FoundryConnectedRunSchema,
   FoundryReadinessResultSchema,
   AgentEvidenceCaptureSchema,
   AgentTrustBoundaryMapSchema,
@@ -55,8 +57,8 @@ const score = calculateCrashScore({
   explanationConfidence: 0.9
 });
 
-if (parsedPacks.length !== 3) {
-  throw new Error(`Expected 3 starter attack packs, found ${parsedPacks.length}.`);
+if (parsedPacks.length !== 5) {
+  throw new Error(`Expected 5 starter attack packs, found ${parsedPacks.length}.`);
 }
 
 if (!project || !agentTarget) {
@@ -126,8 +128,8 @@ const regression = RegressionArtifactSchema.parse({
   description:
     "Synthetic regression artifact used only to validate the shared schema.",
   createdAt: new Date().toISOString(),
-  status: "mock_saved",
-  replayCommand: "POST /regressions/regression-dev-check/replay-mock",
+  status: "ready_for_replay",
+  replayCommand: "POST /regressions/regression-dev-check/replay-sample-lab",
   expectedSafeBehavior: scenarioPack.expectedSafeBehavior,
   expectedFindingCategories: demoRun.findings.map((finding) => finding.category),
   expectedTraceEventTypes: demoRun.trace.map((event) => event.type),
@@ -574,7 +576,8 @@ const foundryReadiness = FoundryReadinessResultSchema.parse({
   missingEnv: [
     "AZURE_FOUNDRY_PROJECT_ENDPOINT",
     "AZURE_FOUNDRY_AGENT_ID",
-    "AZURE_TENANT_ID"
+    "AZURE_TENANT_ID",
+    "AZURE_FOUNDRY_MODEL_DEPLOYMENT"
   ],
   allowedOperations: [
     "reviewed_manifest_import",
@@ -594,6 +597,40 @@ const foundryReadiness = FoundryReadinessResultSchema.parse({
 
 if (foundryReadiness.configured) {
   throw new Error("Dev-check Foundry readiness should default to manifest-only.");
+}
+
+const foundryConnectedProbe = FoundryConnectedProbeSchema.parse({
+  enabled: false,
+  status: "disabled",
+  checkedAt: "2026-06-09T00:02:30.000Z",
+  readiness: foundryReadiness,
+  requiredEnv: foundryReadiness.missingEnv,
+  configuredEnv: foundryReadiness.configuredEnv,
+  missingEnv: foundryReadiness.missingEnv,
+  attemptedLiveCall: false,
+  safetyStatement:
+    "Live Foundry probing is disabled by default and does not call Foundry."
+});
+
+const foundryConnectedRun = FoundryConnectedRunSchema.parse({
+  enabled: false,
+  status: "disabled",
+  checkedAt: "2026-06-09T00:02:45.000Z",
+  readiness: foundryReadiness,
+  attemptedLiveCall: false,
+  runCreated: false,
+  requiredUserInputs: foundryReadiness.missingEnv,
+  blockedOperations: foundryReadiness.blockedOperations,
+  safetyStatement:
+    "Connected Foundry run is blocked by default and creates no external run."
+});
+
+if (
+  foundryConnectedProbe.attemptedLiveCall ||
+  foundryConnectedRun.runCreated ||
+  foundryConnectedRun.attemptedLiveCall
+) {
+  throw new Error("Dev-check connected Foundry gate should block live calls.");
 }
 
 const evidenceInput = ImportAgentEvidenceInputSchema.parse(sampleAgentEvidence);
@@ -659,6 +696,15 @@ const requiredReadinessFiles = [
   "docs/assets/brand/crash-lab-hero.png",
   "apps/studio-web/public/brand/failsafe-logo.png",
   "apps/studio-web/public/brand/crash-lab-hero.png",
+  "apps/studio-web/public/brand/generated/evidence-shield-platform.png",
+  "apps/studio-web/public/brand/generated/runner-readiness-platform.png",
+  "examples/foundry-manifests/invoice-review-agent.json",
+  "examples/foundry-evidence/invoice-review-recording.json",
+  "azure.yaml",
+  ".azure/deployment-plan.md",
+  "infra/main.bicep",
+  "apps/orchestrator-api/Dockerfile",
+  "apps/studio-web/Dockerfile",
   "scripts/release-check.ts",
   "scripts/api-smoke.ts",
   "scripts/cli-smoke.ts",
@@ -710,7 +756,7 @@ assertFileIncludes(
 
 assertFileOmits("scripts/failsafe.ts", "In-memory " + "mock regressions");
 assertFileOmits(
-  "apps/studio-web/components/CopilotPromptPanel.tsx",
+  "apps/studio-web/components/AppShell.tsx",
   "Phase 2 " + "mock studio"
 );
 assertFileOmits(
