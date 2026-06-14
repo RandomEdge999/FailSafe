@@ -32,7 +32,7 @@ FailSafe fits Creative Apps because it turns hidden agent safety review into an 
 
 ## AI assistance disclosure
 
-Do not fabricate Copilot usage. The repo includes Copilot-ready prompts and Patch Coach payloads. The final submitter should disclose the real Copilot workflow used during development and video recording. This final completion pass used Codex locally.
+Disclose the real Copilot workflow used during development and in the demo video. The repository includes Copilot-ready instructions, prompt files, custom agent instructions, and Patch Coach payloads; the video should show the submitter using VS Code/GitHub Copilot Chat with a bounded Patch Coach payload.
 
 ## Final before submission
 

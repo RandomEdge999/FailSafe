@@ -742,7 +742,7 @@ function assertFileOmits(filePath: string, forbiddenText: string) {
 assertFileIncludes("README.md", "## AI assistance disclosure");
 assertFileIncludes("README.md", "## Screenshots");
 assertFileIncludes("README.md", "## Safety boundaries");
-assertFileIncludes("README.md", "## Known intentional limits");
+assertFileIncludes("README.md", "## Security model and roadmap");
 assertFileIncludes("README.md", "recorded agent evidence");
 assertFileIncludes("README.md", "Microsoft Agents League");
 assertFileIncludes(

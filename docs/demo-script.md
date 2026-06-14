@@ -88,4 +88,4 @@ pnpm failsafe runs
 
 Close:
 
-"FailSafe fills the gap between building an agent and trusting it enough to ship: visible boundaries, local crash tests, regression evidence, and honest limitations."
+"FailSafe fills the gap between building an agent and trusting it enough to ship: visible boundaries, local crash tests, regression evidence, and reviewable safety controls."

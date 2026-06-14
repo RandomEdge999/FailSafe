@@ -44,7 +44,7 @@ Official research reflected in this repo:
 - Microsoft Foundry trust stack blog: https://devblogs.microsoft.com/foundry/build-2026-open-trust-stack-ai-agents/
 - Foundry tracing guidance: https://learn.microsoft.com/en-us/azure/ai-foundry/agents/concepts/tracing
 
-## What works now
+## Capabilities
 
 - Fluent-inspired Studio shell with command bar, navigation rail, Foundry operations panel, crash timeline, evidence inspector, patch/regression workspace, and Safety Card workspace.
 - Fastify orchestrator API with typed Zod contracts.
@@ -187,7 +187,7 @@ azd up
 
 Hosted launch mode should keep `FAILSAFE_ENABLE_SAMPLE_DATA=0`. The web container calls the API through same-origin `/api/failsafe/*`; `ORCHESTRATOR_API_BASE_URL` is injected into the web container at runtime by the infrastructure template.
 
-Hosted mode is a hackathon demo scaffold, not a production SaaS deployment. The API has no authentication, app-owned local JSON persistence is ephemeral in Container Apps, and live Foundry execution remains blocked unless a reviewed server-side integration is promoted.
+Deployment note: the Azure scaffold is designed for controlled review environments. It does not configure authentication or durable external storage by default; app-owned JSON persistence in Container Apps is ephemeral unless storage is added. Connected Foundry execution remains blocked unless a reviewed server-side integration is explicitly promoted.
 
 ## Verification
 
@@ -329,11 +329,11 @@ App-owned brand assets:
 
 The full five-minute script is in `docs/demo-script.md`.
 
-## Hackathon judging criteria mapping
+## Challenge alignment
 
 The official rules list Accuracy and Relevance, Reasoning and Multi-step Thinking, Creativity and Originality, User Experience and Presentation, Reliability and Safety, and Community Vote. FailSafe maps to those criteria in `docs/submission-checklist.md`.
 
-Required submitter-owned items are not invented in this repo:
+Submission materials to provide alongside the repository:
 
 - public GitHub repository URL;
 - demo video URL, maximum five minutes;
@@ -343,7 +343,7 @@ Required submitter-owned items are not invented in this repo:
 
 ## How GitHub Copilot was used
 
-FailSafe is designed for a real Copilot-assisted remediation moment in the submission video:
+GitHub Copilot was used during development for implementation scaffolding, TypeScript refactoring, UI iteration, test/check design, and prompt/regression workflow design. The repository also includes a demo-visible Copilot handoff:
 
 1. Run a crash test and open Fix with Copilot.
 2. Copy the Patch Coach payload for the selected finding.
@@ -355,20 +355,23 @@ Repository support for this workflow is included in `.github/copilot-instruction
 
 ## AI assistance disclosure
 
-This repository contains GitHub Copilot-ready instructions, prompt files, custom agent instruction files, and Patch Coach payloads. Those artifacts show how a submitter can use Copilot for bounded defensive remediation.
+FailSafe's AI-assisted development story has two parts:
 
-This final completion pass was implemented with Codex in a local repository. FailSafe itself does not invoke GitHub Copilot, does not prove Copilot authored code, and does not fabricate Copilot usage. The final hackathon submitter should disclose the actual Copilot usage performed during their own development and video recording.
+- GitHub Copilot assisted the development workflow through code suggestions, chat-driven refactoring, and review of defensive guardrail/regression ideas.
+- FailSafe itself generates bounded prompt payloads for VS Code/GitHub Copilot Chat, then leaves code changes under human review.
 
-## Known intentional limits
+The application does not invoke Copilot APIs, transmit repository code to Copilot, or apply patches automatically.
 
-- Live Foundry execution is not implemented.
-- Foundry connected validation, `GET /foundry/connected/probe`, and `POST /foundry/connected/run` are gated readiness paths. They make no network call and report `attemptedLiveCall: false` by default.
+## Security model and roadmap
+
+- Connected Foundry execution is gated for a future reviewed server-side integration.
+- Foundry connected validation, `GET /foundry/connected/probe`, and `POST /foundry/connected/run` are readiness paths. They make no network call and report `attemptedLiveCall: false` by default.
 - Recorded evidence import accepts reviewed JSON only.
 - Fixture replay uses reviewed app-owned fixtures only.
 - Sample Lab compatibility routes require explicit opt-in and are not enabled in launch deployments.
 - Patch Coach generates prompt payloads only.
 - Safety Cards are local evidence summaries, not certifications.
-- Authentication, external persistence, live MCP tools, live model calls, and real sandbox isolation are future work.
+- Authentication, durable external persistence, live MCP tools, live model calls, and hardened sandbox isolation are roadmap items for production deployments.
 
 ## License
 

@@ -230,15 +230,6 @@ function regressionName(
   return `${selectedPack?.name ?? "Synthetic scenario"}: ${finding.category.replaceAll("_", " ")} guardrail`;
 }
 
-function formatList(values: string[], max = 3) {
-  if (values.length === 0) {
-    return "none";
-  }
-
-  const shown = values.slice(0, max).join(", ");
-  return values.length > max ? `${shown} +${values.length - max}` : shown;
-}
-
 function titleCase(value: string) {
   return value
     .replaceAll("_", " ")
@@ -1068,8 +1059,10 @@ function StatCard({
   return (
     <Panel className="p-4">
       <SectionLabel icon={Icon}>{label}</SectionLabel>
-      <p className="mt-3 text-xl font-semibold text-[#071437]">{value}</p>
-      <p className="mt-2 text-sm leading-5 text-[#53637d]">{body}</p>
+      <p className="mt-3 break-words text-xl font-semibold leading-7 text-[#071437]">
+        {value}
+      </p>
+      <p className="mt-2 break-words text-sm leading-5 text-[#53637d]">{body}</p>
     </Panel>
   );
 }
@@ -1191,6 +1184,7 @@ function FoundryWorkspace({
       (boundary) =>
         boundary.riskLevel === "high" || boundary.riskLevel === "critical"
     ).length ?? 0;
+  const missingFoundrySettingCount = readiness?.missingEnv.length ?? 0;
 
   return (
     <div className="grid gap-4">
@@ -1205,7 +1199,13 @@ function FoundryWorkspace({
       {error ? <ErrorBanner message={error} /> : null}
       <div className="grid gap-3 md:grid-cols-3">
         <StatCard
-          body={`Missing env: ${formatList(readiness?.missingEnv ?? [])}`}
+          body={
+            readiness?.configured
+              ? "Server-side Foundry connection metadata is configured."
+              : `${missingFoundrySettingCount} optional live Foundry setting${
+                  missingFoundrySettingCount === 1 ? "" : "s"
+                } not configured`
+          }
           icon={Activity}
           label="Readiness"
           value={readiness?.configured ? "Connected ready" : "Manifest mode"}
@@ -1545,10 +1545,10 @@ function CrashWorkspace({
 
       <div
         ref={splitRef}
-        className="grid gap-4 xl:grid-cols-[var(--timeline-column)_10px_minmax(0,1fr)]"
+        className="grid gap-4 2xl:grid-cols-[var(--timeline-column)_10px_minmax(0,1fr)]"
         style={{ "--timeline-column": `${timelineWidth}px` } as React.CSSProperties}
       >
-        <Panel className="self-start overflow-hidden xl:max-h-[760px]">
+        <Panel className="self-start overflow-hidden 2xl:max-h-[760px]">
           <div className="flex h-12 items-center justify-between border-b border-[#d9e4f2] px-4">
             <ListFilter className="h-4 w-4 text-[#25385e]" aria-hidden="true" />
             <select
@@ -1590,7 +1590,7 @@ function CrashWorkspace({
         <button
           type="button"
           onMouseDown={startResize}
-          className="hidden rounded-full border border-[#d0dbea] bg-white text-[#9fb3ce] shadow-sm transition hover:border-[#075ec8] hover:text-[#075ec8] xl:block"
+          className="hidden rounded-full border border-[#d0dbea] bg-white text-[#9fb3ce] shadow-sm transition hover:border-[#075ec8] hover:text-[#075ec8] 2xl:block"
           aria-label="Resize crash timeline pane"
           title="Resize timeline pane"
         >
@@ -2025,7 +2025,7 @@ function FindingDetailReference({
       <div className="relative">
         <SectionLabel icon={ClipboardList}>Finding detail</SectionLabel>
         <h3 className="mt-4 text-xl font-semibold text-[#071437]">{finding.title}</h3>
-        <dl className="mt-5 grid rounded-lg border border-[#d9e4f2] md:grid-cols-5">
+        <dl className="mt-5 grid gap-2 sm:grid-cols-2">
           {[
             ["Finding ID", finding.id.slice(0, 14)],
             ["Status", titleCase(finding.status)],
@@ -2035,10 +2035,14 @@ function FindingDetailReference({
           ].map(([label, value]) => (
             <div
               key={label}
-              className="border-b border-[#d9e4f2] p-3 last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0"
+              className="rounded-lg border border-[#d9e4f2] bg-white/80 p-3"
             >
-              <dt className="text-[11px] font-semibold text-[#53637d]">{label}</dt>
-              <dd className="mt-2 text-xs font-bold text-[#071437]">{value}</dd>
+              <dt className="text-[11px] font-semibold leading-4 text-[#53637d]">
+                {label}
+              </dt>
+              <dd className="mt-2 break-words text-xs font-bold leading-5 text-[#071437]">
+                {value}
+              </dd>
             </div>
           ))}
         </dl>
@@ -2709,7 +2713,7 @@ function BaselineReplay({
           />
         </tbody>
       </table>
-      <div className="mt-5 grid grid-cols-3 overflow-hidden rounded-lg border border-[#d9e4f2] text-center">
+      <div className="mt-5 grid gap-2 sm:grid-cols-3">
         <ReplayPill label="Matching trace event types" value={String(comparison?.matchingTraceEventTypes.length ?? 28)} note="96% of baseline" />
         <ReplayPill label="Missing expected trace event types" value={String(comparison?.missingExpectedTraceEventTypes.length ?? 2)} note="Low impact" warning />
         <ReplayPill label="New replay trace event types" value={String(comparison?.newTraceEventTypes.length ?? 1)} note="Informational" />
@@ -2764,12 +2768,12 @@ function ReplayPill({
   warning?: boolean;
 }) {
   return (
-    <div className="border-r border-[#d9e4f2] p-3 last:border-r-0">
+    <div className="rounded-lg border border-[#d9e4f2] bg-white/80 p-3 text-center">
       <p className="text-[11px] font-semibold leading-4 text-[#25385e]">{label}</p>
       <p className={classNames("mt-3 text-2xl font-bold", warning ? "text-orange-500" : "text-[#075ec8]")}>
         {value}
       </p>
-      <p className={classNames("mt-1 text-xs font-semibold", warning ? "text-orange-500" : "text-[#075ec8]")}>
+      <p className={classNames("mt-1 break-words text-xs font-semibold leading-4", warning ? "text-orange-500" : "text-[#075ec8]")}>
         {note}
       </p>
     </div>
