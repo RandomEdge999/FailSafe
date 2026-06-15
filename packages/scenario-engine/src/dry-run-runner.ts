@@ -153,7 +153,7 @@ function decideAction(action: RunnerAction): ActionDecision {
       return {
         decision: "blocked",
         risk: "blocked",
-        reason: "Email sending is blocked in demo and dry-run modes.",
+        reason: "Email sending is blocked in local review and dry-run modes.",
         safetyNote: "No email is composed, queued, or sent."
       };
     case "database_query":

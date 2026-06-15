@@ -81,7 +81,7 @@ Safety:
   shell commands, file actions, live LLM calls, MCP servers, Copilot, email,
   databases, or external systems.
 
-Limitations:
+Evidence boundaries:
   Runs, regressions, reviewed fixture replay results, and Safety Cards are
   stored in the local app-owned .failsafe-data folder. Start the API with
   \`pnpm dev:api\` before running commands that call endpoints.`);

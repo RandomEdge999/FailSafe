@@ -81,7 +81,7 @@ const categoryPatterns: Record<
       "Keep execution disabled until an isolated reviewed runner, deny-by-default policy, and approval path exist.",
     primary: "No arbitrary execution guard",
     steps: [
-      "Keep shell and file-write capabilities unavailable in demo mode.",
+      "Keep shell and file-write capabilities unavailable in local review mode.",
       "Model risky actions through dry-run policy decisions only.",
       "Add tests proving blocked actions report wouldExecute=false."
     ]
@@ -243,7 +243,7 @@ export function createPatchCoachPlan(input: PatchCoachInput): PatchCoachPlan {
       "Regression artifact saved from a terminal run.",
       "Deterministic Sample Lab replay still links back to the baseline run.",
       "Fixture-only replay uses reviewed app-owned fixture IDs.",
-      "Report export states limitations and local-evidence status."
+      "Report export states evidence boundaries and local-evidence status."
     ],
     safetyBoundaries: [
       "Patch Coach creates Copilot-ready prompt payloads only.",

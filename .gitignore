@@ -13,6 +13,8 @@ coverage/
 pnpm-debug.log*
 tsconfig.tsbuildinfo
 .failsafe-data/
+.tmp-start/
+.tmp-final-audit/
 .tmp-visual-audit/
 .DS_Store
 Thumbs.db

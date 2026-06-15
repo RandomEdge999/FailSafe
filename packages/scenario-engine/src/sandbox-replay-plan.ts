@@ -275,7 +275,7 @@ export function createReviewedSandboxReplayPlan(
     requiresHumanReview: true,
     limitations: [
       "This is a reviewed sandbox plan, not arbitrary execution.",
-      "The API stores demo data only in the app-owned local FailSafe store.",
+      "The API stores local review data only in the app-owned local FailSafe store.",
       "Fixture replay can use only reviewed synthetic fixture IDs.",
       "Allowed fixture IDs are not client-provided paths, URLs, commands, or tools.",
       "The plan does not prove that a real code mitigation worked.",

@@ -309,7 +309,7 @@ function scoreMetricValue(value: number) {
 
 function currentMode(run: ScenarioRun | null) {
   if (!run) {
-    return "Sample Lab";
+    return "No run loaded";
   }
 
   if (run.id.startsWith("run-evidence-")) {
@@ -329,6 +329,23 @@ function currentMode(run: ScenarioRun | null) {
   }
 
   return "Sample Lab";
+}
+
+function latestRun(runs: ScenarioRun[]) {
+  return runs.reduce<ScenarioRun | null>((selected, run) => {
+    if (!selected) {
+      return run;
+    }
+
+    const runTime = Date.parse(run.completedAt ?? run.startedAt);
+    const selectedTime = Date.parse(selected.completedAt ?? selected.startedAt);
+
+    if (!Number.isFinite(runTime) || !Number.isFinite(selectedTime)) {
+      return run;
+    }
+
+    return runTime >= selectedTime ? run : selected;
+  }, null);
 }
 
 function prettyJson(value: unknown) {
@@ -1116,7 +1133,7 @@ function FoundryHero({
             icon={isImporting ? Loader2 : FileJson}
             onClick={onImportSampleManifest}
           >
-            {isImporting ? "Importing..." : "Use sample manifest"}
+            {isImporting ? "Importing..." : "Use example manifest"}
           </CommandButton>
           <CommandButton
             disabled={isImportingEvidence}
@@ -1131,7 +1148,7 @@ function FoundryHero({
             icon={isImportingEvidence ? Loader2 : FileJson}
             onClick={onImportSampleEvidence}
           >
-            {isImportingEvidence ? "Loading..." : "Use sample evidence"}
+            {isImportingEvidence ? "Loading..." : "Use example evidence"}
           </CommandButton>
         </div>
       </div>
@@ -2103,7 +2120,7 @@ function FindingDetailReference({
             <MiniInfo
               label="Handoff type"
               value="Bounded prompt"
-              body="This handoff opens a prompt in your Copilot context."
+              body="This handoff prepares prompt context for your Copilot session."
             />
             <MiniList
               label="Includes"
@@ -3240,15 +3257,17 @@ export function AppShell() {
       setProjects(loadedProjects);
       setScenarioPacks(loadedScenarios);
       setRegressions(loadedRegressions);
+      const currentLoadedRun = latestRun(loadedRuns);
+
       setSelectedPackId(
-        loadedRuns[0]?.scenarioPackId ??
+        currentLoadedRun?.scenarioPackId ??
           loadedEvidence[0]?.scenarioPackId ??
           loadedScenarios[0]?.id ??
           ""
       );
 
-      if (loadedRuns[0]) {
-        applyRun(loadedRuns[0]);
+      if (currentLoadedRun) {
+        applyRun(currentLoadedRun);
       } else {
         setCurrentRun(null);
         setSelectedEventId(undefined);
@@ -3312,12 +3331,12 @@ export function AppShell() {
   }
 
   async function handleRunCommand() {
-    if (activeView === "foundry" && selectedEvidence) {
+    if (selectedEvidence) {
       await handleRunEvidenceCrashTest();
       return;
     }
 
-    if (activeView === "foundry" && selectedAgent) {
+    if (selectedAgent) {
       await handleRunFoundryCrashTest();
       return;
     }

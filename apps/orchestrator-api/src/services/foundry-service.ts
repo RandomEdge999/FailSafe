@@ -118,7 +118,7 @@ export function validateConnectedFoundry(): FoundryConnectedValidation {
     readiness,
     validationStatement: readiness.configured
       ? "Foundry environment variables are present for opt-in connected validation. This endpoint performed configuration validation only and did not call Foundry or execute tools."
-      : "Connected Foundry validation is not ready. Add environment variables locally, then explicitly retry. No network call was made."
+      : "Connected Foundry validation requires local environment variables and an explicit retry. No network call was made."
   });
 }
 
@@ -173,7 +173,7 @@ export function runConnectedFoundry(): FoundryConnectedRun {
     blockedOperations,
     safetyStatement:
       status === "manual_only"
-        ? "Connected Foundry inputs are present, but FailSafe does not create live runs from this demo route. Use the verified local evidence flow unless a reviewed SDK integration is promoted."
+        ? "Connected Foundry inputs are present, but FailSafe does not create live runs from this connected route. Use the verified local evidence flow unless a reviewed SDK integration is promoted."
         : "Connected Foundry run is blocked. FailSafe did not call Foundry, execute tools, store credentials, or create an external run."
   });
 }

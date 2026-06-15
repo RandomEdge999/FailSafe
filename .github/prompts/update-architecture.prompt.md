@@ -8,7 +8,7 @@ Purpose: update FailSafe architecture docs after implementation changes.
 - Files added or modified.
 - Current `docs/architecture.md`.
 - Current `README.md`.
-- Any new constraints or known limitations.
+- Any new constraints or evidence boundaries.
 
 ## Task
 
@@ -23,11 +23,11 @@ Return:
 3. Updated data or trace flow.
 4. Updated Mermaid diagram if needed.
 5. New security boundaries or assumptions.
-6. Known limitations.
+6. Evidence boundaries.
 
 ## Constraints
 
 - Do not document planned features as already implemented.
-- Keep mock behavior clearly labeled.
+- Keep local fixture behavior clearly labeled.
 - Preserve defensive-use-only language.
 - Avoid vague placeholders.

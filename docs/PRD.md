@@ -32,7 +32,7 @@ Given a reviewed Foundry manifest or reviewed recorded agent evidence, FailSafe 
 - Replay comparison.
 - Safety Card export.
 - CLI and API smoke coverage.
-- Honest limitations and AI assistance disclosure.
+- Clear evidence boundaries and AI assistance disclosure.
 
 ## Must not
 

@@ -33,7 +33,7 @@ Return:
 - Metadata pinning.
 - Provenance separation.
 - Trust-boundary labeling.
-- Deny-by-default demo behavior.
+- Deny-by-default local review behavior.
 - Regression tests for synthetic failures.
 
 ## Constraints

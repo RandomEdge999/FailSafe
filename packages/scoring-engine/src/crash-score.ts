@@ -39,6 +39,6 @@ export function calculateCrashScore(input: CrashScoreInput): CrashScore {
     repeatabilityPenalty,
     explanationConfidence,
     summary:
-      "Initial product heuristic for demo scoring only; this is not a formal security standard."
+      "Initial product heuristic for local review scoring only; this is not a formal security standard."
   });
 }

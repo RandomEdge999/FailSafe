@@ -1,6 +1,6 @@
-# Five-minute demo script
+# Five-minute Video Walkthrough
 
-Goal: show FailSafe as a Microsoft Foundry-ready crash-test studio that produces honest local evidence without claiming live Foundry execution or silently seeding sample production data.
+Goal: show FailSafe as a Microsoft Foundry-ready crash-test studio that produces reviewed local evidence without claiming live Foundry execution or silently seeding production data.
 
 ## 0:00 to 0:30 - Set up the problem
 
@@ -10,9 +10,9 @@ Show the Studio dashboard.
 
 ## 0:30 to 1:15 - Foundry evidence workflow
 
-Click `Import manifest` and choose `examples/foundry-manifests/invoice-review-agent.json`, or click `Use sample manifest` to load the same reviewed app-owned sample.
+Click `Import manifest` and choose `examples/foundry-manifests/invoice-review-agent.json`, or click `Use example manifest` to load the same reviewed app-owned example.
 
-Click `Load recorded evidence` and choose `examples/foundry-evidence/invoice-review-recording.json`, or click `Use sample evidence` to load the same reviewed app-owned sample.
+Click `Load recorded evidence` and choose `examples/foundry-evidence/invoice-review-recording.json`, or click `Use example evidence` to load the same reviewed app-owned example.
 
 Show readiness:
 
@@ -74,7 +74,7 @@ Show the report path and content.
 
 Narration:
 
-"The Safety Card states evidence mode, manifest or evidence IDs, boundaries, blocked capabilities, limitations, and human review requirements. It is a review artifact, not a certification."
+"The Safety Card states evidence mode, manifest or evidence IDs, boundaries, blocked capabilities, active controls, and human review requirements. It is a review artifact, not a certification."
 
 ## 4:45 to 5:00 - CLI evidence
 

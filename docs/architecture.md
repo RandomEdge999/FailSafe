@@ -77,14 +77,14 @@ The API persists user-created local evidence in `.failsafe-data`, which is ignor
 
 ## Azure deployment
 
-The deployment scaffold targets Azure Container Apps:
+The deployment profile targets Azure Container Apps:
 
 - `web`: Next.js Studio container exposed publicly.
 - `api`: Fastify Orchestrator API container exposed publicly for browser/API smoke tests.
 - `infra/main.bicep`: Container Apps managed environment and Log Analytics workspace.
 - `azure.yaml`: Azure Developer CLI project metadata.
 
-The hosted web app calls same-origin `/api/failsafe/*`, and the Next.js route proxy forwards those requests to `ORCHESTRATOR_API_BASE_URL` at runtime. Launch deployments should keep `FAILSAFE_ENABLE_SAMPLE_DATA=0`. The scaffold is demo-grade: no auth is configured, app-owned `.failsafe-data` persistence is ephemeral in Container Apps, and live Foundry execution is blocked by default.
+The hosted web app calls same-origin `/api/failsafe/*`, and the Next.js route proxy forwards those requests to `ORCHESTRATOR_API_BASE_URL` at runtime. Launch deployments should keep `FAILSAFE_ENABLE_SAMPLE_DATA=0`. Controlled review deployments use the app-owned evidence store; production operations should add authentication and durable external persistence. Live Foundry execution is blocked by default.
 
 ## Safety model
 

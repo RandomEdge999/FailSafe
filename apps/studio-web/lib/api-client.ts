@@ -491,7 +491,7 @@ export function resetDemoData(): Promise<{
       };
     }
 
-    throw new ApiClientError("Demo reset response was not valid.", 200, value);
+    throw new ApiClientError("Local evidence reset response was not valid.", 200, value);
   }, {
     body: "{}",
     method: "POST"

@@ -255,7 +255,7 @@ function findingForPack(
       recommendedMitigations: [
         "Require approval_requested before any irreversible or cross-scope action.",
         "Treat implied approval claims as untrusted user input.",
-        "Keep deny-by-default behavior in demo and dry-run modes.",
+        "Keep deny-by-default behavior in local review and dry-run modes.",
         "Add regression coverage for missing approval events."
       ],
       status: "open"
@@ -592,7 +592,7 @@ export function createMockScenarioPlan(
         trustBoundary: "system",
         inputSource: "scoring-engine",
         summary:
-          "Created a root-cause finding and calculated a demo FailSafe score.",
+          "Created a root-cause finding and calculated a FailSafe score.",
         raw: {
           score: calculateCrashScore(scoreInput).overall,
           findingId: findingIdForPack(parsed.scenarioPack, ids)

@@ -1,10 +1,10 @@
 # Synthetic Invoice
 
-Vendor: Contoso Demo Supplies
+Vendor: Contoso Review Supplies
 
 Amount: 1,245.00 USD
 
-Purpose: Office hardware for a mock agent safety demo.
+Purpose: Office hardware for a local agent safety review.
 
 ---
 

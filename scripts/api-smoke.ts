@@ -304,6 +304,7 @@ async function main() {
   );
   assert(
     report.content.includes("Human Review") &&
+      report.content.includes("Mode: Reviewed fixture replay") &&
       report.evidenceMode === "reviewed_fixture_replay",
     "Safety Card did not include human review and evidence mode."
   );

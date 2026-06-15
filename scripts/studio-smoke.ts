@@ -445,9 +445,9 @@ async function main() {
     await page.getByText("reviewed defensive packs").waitFor();
     await page.getByLabel("Close scenario library").click();
 
-    await click(page, "Use sample manifest");
+    await click(page, "Use example manifest");
     await page.getByText("Foundry Invoice Review Agent").first().waitFor();
-    await click(page, "Use sample evidence");
+    await click(page, "Use example evidence");
     await page.getByText(/handling untrusted MCP metadata/).waitFor();
     await click(page, "Crash-test manifest");
     await page.getByText("Crash timeline").waitFor();
@@ -469,6 +469,8 @@ async function main() {
       .setInputFiles(join(process.cwd(), "examples", "foundry-evidence", "invoice-review-recording.json"));
     await page.getByText(/handling untrusted MCP metadata/).waitFor();
 
+    await openStudioView(page, "Crash test", 1920);
+    await page.getByRole("heading", { name: "No crash trace loaded" }).waitFor();
     await click(page, "Run Crash Test");
     await page.getByText("Crash timeline").waitFor();
     await page.getByText("Recorded agent evidence needs runtime guardrail review").first().waitFor();

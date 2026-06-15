@@ -1,10 +1,10 @@
 # Build Plan
 
-FailSafe is now in final launch-readiness mode for a Microsoft Agents League Creative Apps submission. It runs locally, includes Azure Container Apps scaffolding, and starts with an empty evidence store unless reviewed JSON data is explicitly imported.
+FailSafe is now in final launch-readiness mode for a Microsoft Agents League Creative Apps submission. It runs locally, includes Azure Container Apps deployment assets, and starts with an empty evidence store unless reviewed JSON data is explicitly imported.
 
 ## Completed
 
-- Monorepo scaffold with Next.js Studio, Fastify API, shared schemas, scenario engine, scoring engine, and trace helpers.
+- Monorepo structure with Next.js Studio, Fastify API, shared schemas, scenario engine, scoring engine, and trace helpers.
 - Fluent-inspired Studio redesign.
 - App-owned product mark and trust-boundary visual.
 - Foundry readiness validation.
@@ -23,8 +23,8 @@ FailSafe is now in final launch-readiness mode for a Microsoft Agents League Cre
 - Findings, timeline evidence, scoring, Patch Coach, regressions, replay comparison, sandbox plans, and Safety Cards.
 - CLI for the same API-backed workflows.
 - Release check, API smoke, CLI smoke, and Studio browser smoke.
-- Azure Developer CLI scaffold: `azure.yaml`, `infra/main.bicep`, and service Dockerfiles.
-- README, demo script, architecture, design, safety, PRD summary, final lock list, and submission checklist.
+- Azure Developer CLI deployment assets: `azure.yaml`, `infra/main.bicep`, and service Dockerfiles.
+- README, video script, architecture, design, safety, PRD summary, final lock list, and submission checklist.
 
 ## Verification gates
 

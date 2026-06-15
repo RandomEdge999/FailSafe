@@ -17,7 +17,7 @@ Map FailSafe findings to practical mitigation patterns such as approval gates, s
 - Do not generate real exploit instructions.
 - Do not weaken approval or sandbox policies.
 - Do not add live external targets.
-- Do not make destructive actions executable in demo mode.
+- Do not make destructive actions executable in local review mode.
 - Do not overclaim that a patch guarantees safety.
 
 ## Input Expectations

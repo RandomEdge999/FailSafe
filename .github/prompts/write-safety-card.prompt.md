@@ -18,12 +18,12 @@ Write a Markdown Safety Card with:
 - Evidence from trace events.
 - Mitigation guidance and regression checklist.
 - Replay or fixture replay comparison summary.
-- Safety boundaries and limitations.
+- Safety boundaries and evidence boundaries.
 
 ## Guardrails
 
 - Keep the card defensive, local, and evidence-based.
 - Do not claim certification, full coverage, real runtime isolation, or real mitigation proof.
 - Do not include secrets, customer data, live targets, external URLs, exploit steps, or destructive instructions.
-- State when evidence is synthetic, mock-only, or reviewed fixture-only.
+- State when evidence is synthetic, local-only, or reviewed fixture-only.
 - Keep all recommendations bounded for human review before any patch is applied.

@@ -17,7 +17,7 @@ FailSafe is defensive-use-only software for local agent safety review.
 - Arbitrary user path reads or writes.
 - Credential storage.
 - Live Foundry agent invocation.
-- Live Foundry run creation from the launch demo route.
+- Live Foundry run creation from the connected route.
 - Live model/provider calls.
 - Live MCP tool execution.
 - Live external target testing.
@@ -40,7 +40,7 @@ Fixture replay uses reviewed app-owned fixture IDs derived from saved regression
 
 ## Reporting rules
 
-Safety Cards must state evidence mode, local-only boundaries, limitations, and human review requirements. They are review artifacts, not security certifications.
+Safety Cards must state evidence mode, local-only boundaries, active controls, and human review requirements. They are review artifacts, not security certifications.
 
 ## AI disclosure
 

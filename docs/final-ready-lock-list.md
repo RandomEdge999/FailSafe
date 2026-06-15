@@ -10,7 +10,7 @@ FailSafe remains defensive, local, typed, and reviewed.
 
 Launch-mode state starts empty. Reviewed example fixtures exist for onboarding and smoke tests, but the app does not automatically seed sample production data.
 
-The Studio exposes user-clicked `Use sample manifest` and `Use sample evidence` actions for the reviewed examples. These are explicit demo actions, not silent launch seeding.
+The Studio exposes user-clicked `Use example manifest` and `Use example evidence` actions for the reviewed examples. These are explicit onboarding actions, not silent launch seeding.
 
 ## Locked non-claims
 
@@ -60,12 +60,12 @@ azd up
 
 ## Required public materials
 
-- README with pitch, problem, solution, architecture, setup, tests, API/CLI examples, screenshots, limitations, and AI assistance disclosure.
-- `docs/demo-script.md` for a five-minute video.
+- README with pitch, problem, solution, architecture, setup, tests, API/CLI examples, screenshots, evidence boundaries, and AI assistance disclosure.
+- `docs/video-walkthrough.md` for a five-minute video.
 - `docs/submission-checklist.md` for official-rule mapping.
 - `docs/architecture.md`, `docs/design.md`, and `docs/safety-policy.md`.
 - `.env.example` with no active secrets.
-- Azure deployment scaffold: `azure.yaml`, `infra/main.bicep`, `.azure/deployment-plan.md`, and service Dockerfiles.
+- Azure deployment assets: `azure.yaml`, `infra/main.bicep`, `.azure/deployment-plan.md`, and service Dockerfiles.
 - Reviewed import examples: `examples/foundry-manifests/invoice-review-agent.json` and `examples/foundry-evidence/invoice-review-recording.json`.
 
 ## Submitter-owned items
@@ -81,6 +81,6 @@ azd up
 
 ## Final submission gates
 
-- Confirm README includes `FAILSAFE_ENABLE_LIVE_FOUNDRY`, `/foundry/connected/probe`, and the demo-grade hosted deployment caveat.
+- Confirm README includes `FAILSAFE_ENABLE_LIVE_FOUNDRY`, `/foundry/connected/probe`, and the hosted deployment review profile.
 - Confirm hosted deployments keep `FAILSAFE_ENABLE_SAMPLE_DATA=0`.
-- Confirm the demo video includes a real VS Code/GitHub Copilot Chat step using the Patch Coach payload.
+- Confirm the video includes a real VS Code/GitHub Copilot Chat step using the Patch Coach payload.

@@ -137,6 +137,8 @@ export function createSafetyReportForRun(
       ? "Recorded agent evidence"
     : run.id.startsWith("run-foundry")
       ? "Foundry manifest crash test"
+      : run.id.startsWith("run-fixture-")
+        ? "Reviewed fixture replay"
       : run.baselineRunId
         ? "Sample Lab replay"
         : "Sample Lab baseline";
@@ -146,10 +148,10 @@ export function createSafetyReportForRun(
     "Copilot output is a prompt handoff for human review, not an automatic patch.",
     "Fixture replay results, when present, use app-owned reviewed fixtures only."
   ];
-  const limitations = [
+  const evidenceBoundaries = [
     "This report is not a security certification.",
     "Scores are product heuristics for selected defensive crash packs.",
-    "Sample Lab replay, Foundry manifest mode, and fixture replay do not prove arbitrary runtime isolation.",
+    "Sample Lab replay, Foundry manifest mode, and reviewed fixture replay do not prove arbitrary runtime isolation.",
     "Additional authorized testing is required before production deployment."
   ];
   const content = `# ${title}
@@ -204,9 +206,9 @@ ${markdownList([
   "Recorded evidence imports require reviewer metadata and reject paths, URLs, commands, and high-confidence secrets."
 ])}
 
-## Limitations
+## Evidence Boundaries
 
-${markdownList(limitations)}
+${markdownList(evidenceBoundaries)}
 `;
   const report = SafetyReportSchema.parse({
     id: reportId,
@@ -228,7 +230,7 @@ ${markdownList(limitations)}
     mockOnly: true,
     fixtureOnly,
     safetyBoundaries,
-    limitations
+    limitations: evidenceBoundaries
   });
 
   if (!existsSync(failsafeStorePaths.reportsDir)) {

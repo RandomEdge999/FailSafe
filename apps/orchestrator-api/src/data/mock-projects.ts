@@ -11,7 +11,7 @@ export const mockProjects: Project[] = ProjectSchema.array().parse([
     updatedAt: "2026-06-05T06:00:00.000Z",
     riskProfile: {
       summary:
-        "High-risk demo surface: one unreviewed MCP server, one risky file-read tool, and partial approval coverage.",
+        "High-risk review surface: one unreviewed MCP server, one risky file-read tool, and partial approval coverage.",
       highestToolRisk: "high",
       trustBoundaryCount: 5,
       approvalCoverage: 0.55
@@ -42,7 +42,7 @@ export const mockProjects: Project[] = ProjectSchema.array().parse([
         id: "tool-summarize-invoice",
         name: "summarize_invoice",
         description:
-          "Summarizes synthetic invoice text. The demo metadata intentionally contains suspicious instruction-like language.",
+          "Summarizes synthetic invoice text. The local review metadata intentionally contains suspicious instruction-like language.",
         source: "mcp-server",
         riskLevel: "medium",
         requiresApproval: false,

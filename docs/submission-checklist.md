@@ -2,7 +2,7 @@
 
 This checklist maps FailSafe to the official Microsoft Agents League requirements and judging rubric researched on June 9, 2026.
 
-Current launch-readiness stance: the app starts with no seeded production data, imports reviewed JSON evidence explicitly, offers user-clicked sample imports for the reviewed app-owned examples, and includes Azure Container Apps deployment scaffolding.
+Current launch-readiness stance: the app starts with no seeded production data, imports reviewed JSON evidence explicitly, offers user-clicked example imports for the reviewed app-owned examples, and includes Azure Container Apps deployment assets.
 
 ## Official deliverables
 
@@ -10,7 +10,7 @@ Source: https://github.com/microsoft/Agents-League-AISF-Regulations/blob/main/OF
 
 - Public GitHub repository: submitter-owned URL.
 - Project description: use the README pitch/problem/solution sections.
-- Demo video: maximum five minutes, use `docs/demo-script.md`.
+- Video walkthrough: maximum five minutes, use `docs/video-walkthrough.md`.
 - Architecture diagram: README Mermaid diagram and `docs/architecture.md`.
 - Azure deployability: `azure.yaml`, `infra/main.bicep`, service Dockerfiles, and `.azure/deployment-plan.md`.
 - Team/member information: submitter-owned, including Microsoft Learn usernames if applicable.
@@ -26,13 +26,13 @@ FailSafe fits Creative Apps because it turns hidden agent safety review into an 
 - Accuracy and Relevance, 20 percent: addresses agent safety testing for Foundry/Copilot-style builders and runs as a working local or Azure-hosted product.
 - Reasoning and Multi-step Thinking, 20 percent: maps manifests/evidence to trust boundaries, evaluates scenarios, creates findings, suggests mitigation, saves regressions, replays fixtures, and exports reports.
 - Creativity and Originality, 15 percent: crash-test studio metaphor, timeline evidence, trust-boundary visualization, Patch Coach handoff, and Safety Card.
-- User Experience and Presentation, 15 percent: Fluent-inspired Studio, responsive shell, keyboard-visible controls, refreshed screenshots, and five-minute script.
-- Reliability and Safety, 20 percent: explicit blocked capabilities, empty launch-mode store, schema validation, release checks, API smoke, CLI smoke, Studio smoke, Azure scaffold, and honest limitations.
+- User Experience and Presentation, 15 percent: Fluent-inspired Studio, responsive shell, keyboard-visible controls, refreshed screenshots, and five-minute walkthrough.
+- Reliability and Safety, 20 percent: explicit blocked capabilities, empty launch-mode store, schema validation, release checks, API smoke, CLI smoke, Studio smoke, Azure deployment assets, and clear evidence boundaries.
 - Community Vote, 10 percent: submitter-owned.
 
 ## AI assistance disclosure
 
-Disclose the real Copilot workflow used during development and in the demo video. The repository includes Copilot-ready instructions, prompt files, custom agent instructions, and Patch Coach payloads; the video should show the submitter using VS Code/GitHub Copilot Chat with a bounded Patch Coach payload.
+Disclose the real Copilot workflow used during development and in the video. The repository includes Copilot-ready instructions, prompt files, custom agent instructions, and Patch Coach payloads; the video should show the submitter using VS Code/GitHub Copilot Chat with a bounded Patch Coach payload.
 
 ## Final before submission
 
@@ -40,8 +40,8 @@ Disclose the real Copilot workflow used during development and in the demo video
 - Confirm screenshots are refreshed.
 - Confirm no `.env`, credentials, or `.failsafe-data` are tracked.
 - Confirm `FailSafe_PRD.md` remains untracked.
-- Confirm README limitations do not claim live Foundry execution.
+- Confirm README evidence boundaries do not claim live Foundry execution.
 - Confirm `GET /foundry/connected/probe` and `POST /foundry/connected/run` remain disabled by default unless `FAILSAFE_ENABLE_LIVE_FOUNDRY=1` is intentionally set for a local probe.
 - Confirm hosted deployments keep `FAILSAFE_ENABLE_SAMPLE_DATA=0`.
-- Confirm hosted deployments are described as demo-grade, with no auth and ephemeral app-owned persistence.
+- Confirm hosted deployments describe their review profile clearly, including authentication and persistence requirements for production operation.
 - Confirm any Copilot proof in the video is a real VS Code/GitHub Copilot interaction, not an app claim.

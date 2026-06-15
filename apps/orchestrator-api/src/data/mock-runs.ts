@@ -55,7 +55,7 @@ export const mockRuns: ScenarioRun[] = ScenarioRunSchema.array().parse([
         actor: "orchestrator",
         trustBoundary: "repository",
         inputSource: "examples/vulnerable-agent",
-        summary: "Imported Vulnerable Invoice Agent in demo mode.",
+        summary: "Imported Vulnerable Invoice Agent in local review mode.",
         raw: { projectId: "project-vulnerable-agent" },
         metadata: { demoMode: true }
       },
@@ -127,7 +127,7 @@ export const mockRuns: ScenarioRun[] = ScenarioRunSchema.array().parse([
         trustBoundary: "system",
         inputSource: "scoring-engine",
         summary:
-          "Created finding and calculated a demo FailSafe score of 43.3.",
+          "Created finding and calculated a FailSafe score of 43.3.",
         raw: { score: score.overall },
         parentEventId: "event-policy-violation",
         metadata: { severity: "high", confidence: "high" }

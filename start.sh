@@ -20,6 +20,7 @@ LOG_DIR="${LOG_DIR:-$ROOT_DIR/.tmp-start}"
 RUN_CHECKS="${RUN_CHECKS:-1}"
 
 export ORCHESTRATOR_API_PORT="$API_PORT"
+export ORCHESTRATOR_API_BASE_URL="${ORCHESTRATOR_API_BASE_URL:-http://localhost:$API_PORT}"
 export STUDIO_WEB_PORT="$WEB_PORT"
 export NEXT_PUBLIC_API_BASE_URL="${NEXT_PUBLIC_API_BASE_URL:-http://localhost:$API_PORT}"
 export NEXT_TELEMETRY_DISABLED="${NEXT_TELEMETRY_DISABLED:-1}"
@@ -27,6 +28,9 @@ export NEXT_TELEMETRY_DISABLED="${NEXT_TELEMETRY_DISABLED:-1}"
 API_PID=""
 WEB_PID=""
 CLEANED_UP=0
+NODE_CMD=()
+PNPM_CMD=()
+PNPM_CMD_KIND="native"
 
 log() {
   printf '\n[start] %s\n' "$*"
@@ -48,12 +52,52 @@ require_number() {
   esac
 }
 
-require_command() {
-  command -v "$1" >/dev/null 2>&1 || fail "Missing required command: $1"
+run_pnpm() {
+  if [[ "$PNPM_CMD_KIND" == "cmd" ]]; then
+    local command
+    local escaped
+
+    command="set ORCHESTRATOR_API_PORT=$API_PORT"
+    command="$command&& set ORCHESTRATOR_API_BASE_URL=$ORCHESTRATOR_API_BASE_URL"
+    command="$command&& set STUDIO_WEB_PORT=$WEB_PORT"
+    command="$command&& set NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL"
+    command="$command&& set NEXT_TELEMETRY_DISABLED=$NEXT_TELEMETRY_DISABLED"
+    command="$command&& pnpm"
+
+    for arg in "$@"; do
+      escaped="${arg//\"/\\\"}"
+      command="$command $escaped"
+    done
+
+    cmd.exe /d /s /c "$command"
+    return $?
+  fi
+
+  "${PNPM_CMD[@]}" "$@"
 }
 
-run_pnpm() {
-  pnpm "$@"
+run_node() {
+  "${NODE_CMD[@]}" "$@"
+}
+
+configure_node_commands() {
+  if command -v node >/dev/null 2>&1 && node -v >/dev/null 2>&1; then
+    NODE_CMD=(node)
+  elif command -v cmd.exe >/dev/null 2>&1 && cmd.exe /c node -v >/dev/null 2>&1; then
+    NODE_CMD=(cmd.exe /c node)
+  else
+    fail "Missing required command: node"
+  fi
+
+  if command -v pnpm >/dev/null 2>&1 && pnpm -v >/dev/null 2>&1; then
+    PNPM_CMD=(pnpm)
+    PNPM_CMD_KIND="native"
+  elif command -v cmd.exe >/dev/null 2>&1 && cmd.exe /c pnpm -v >/dev/null 2>&1; then
+    PNPM_CMD=(cmd.exe /c pnpm)
+    PNPM_CMD_KIND="cmd"
+  else
+    fail "Missing required command: pnpm"
+  fi
 }
 
 kill_process_tree() {
@@ -147,9 +191,6 @@ port_is_listening() {
 wait_for_url() {
   local url="$1"
   local label="$2"
-  local port="${url##*:}"
-  port="${port%%/*}"
-
   for _ in {1..80}; do
     if command -v curl >/dev/null 2>&1 &&
       curl -fsS --max-time 2 "$url" >/dev/null 2>&1; then
@@ -157,13 +198,8 @@ wait_for_url() {
       return 0
     fi
 
-    if node -e "fetch(process.argv[1]).then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" "$url" >/dev/null 2>&1; then
+    if run_node -e "fetch(process.argv[1]).then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" "$url" >/dev/null 2>&1; then
       log "$label is ready at $url."
-      return 0
-    fi
-
-    if [[ "$port" =~ ^[0-9]+$ ]] && port_is_listening "$port"; then
-      log "$label is listening at $url."
       return 0
     fi
 
@@ -267,8 +303,7 @@ trap cleanup INT TERM EXIT
 
 require_number "ORCHESTRATOR_API_PORT" "$API_PORT"
 require_number "STUDIO_WEB_PORT" "$WEB_PORT"
-require_command node
-require_command pnpm
+configure_node_commands
 
 mkdir -p "$LOG_DIR"
 
@@ -276,6 +311,7 @@ log "FailSafe root: $ROOT_DIR"
 log "API port: $API_PORT"
 log "Web port: $WEB_PORT"
 log "API base baked into web build: $NEXT_PUBLIC_API_BASE_URL"
+log "API base used by web proxy: $ORCHESTRATOR_API_BASE_URL"
 log "Logs: $LOG_DIR"
 
 check_python_requirements
@@ -305,11 +341,12 @@ API_PID=$!
 wait_for_url "http://localhost:$API_PORT/health" "FailSafe API"
 
 log "Starting Studio web server."
-run_pnpm --filter @failsafe/studio-web exec next start -p "$WEB_PORT" -H "$HOST" \
+run_pnpm --filter @failsafe/studio-web exec -- next start -p "$WEB_PORT" -H "$HOST" \
   >"$LOG_DIR/web.out.log" 2>"$LOG_DIR/web.err.log" &
 WEB_PID=$!
 
 wait_for_url "http://localhost:$WEB_PORT" "FailSafe Studio"
+wait_for_url "http://localhost:$WEB_PORT/api/failsafe/health" "FailSafe Studio API proxy"
 
 log "FailSafe Studio is running: http://$DISPLAY_HOST:$WEB_PORT"
 log "FailSafe API is running: http://$DISPLAY_HOST:$API_PORT"

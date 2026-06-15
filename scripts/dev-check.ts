@@ -681,7 +681,7 @@ const requiredReadinessFiles = [
   "agents/crash-analyst.agent.md",
   "agents/mitigation-coach.agent.md",
   "agents/scenario-author.agent.md",
-  "agents/demo-director.agent.md",
+  "agents/video-director.agent.md",
   "docs/final-ready-lock-list.md",
   "docs/assets/screenshots/dashboard.png",
   "docs/assets/screenshots/timeline-finding-detail.png",
@@ -741,8 +741,8 @@ function assertFileOmits(filePath: string, forbiddenText: string) {
 
 assertFileIncludes("README.md", "## AI assistance disclosure");
 assertFileIncludes("README.md", "## Screenshots");
-assertFileIncludes("README.md", "## Safety boundaries");
-assertFileIncludes("README.md", "## Security model and roadmap");
+assertFileIncludes("README.md", "## Safety Boundaries");
+assertFileIncludes("README.md", "## Security Model");
 assertFileIncludes("README.md", "recorded agent evidence");
 assertFileIncludes("README.md", "Microsoft Agents League");
 assertFileIncludes(
